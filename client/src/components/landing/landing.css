@@ -9,13 +9,9 @@
   white-space: pre-line;
 }
 
-.cert-btn {
-  margin-top: 40px;
-}
-
 .landing-page ul {
   list-style: none;
-  padding-left: 0;
+  padding-inline-start: 0;
 }
 
 #featured-logos {
@@ -25,25 +21,30 @@
   margin-top: 0;
 }
 
-.landing-page h1,
-.landing-page h2,
-.landing-page p {
-  font-family: 'Lato', sans-serif;
+.landing-page .landing-page-happy {
+  font-size: 1.1rem;
+  margin-top: 0;
 }
 
-p.caption {
+figcaption.caption {
   margin: 10px 0 0;
-  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
   color: var(--quaternary-color);
 }
 
 .as-seen-in {
   background-color: var(--gray-75);
   color: var(--gray-15);
+  padding-inline: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .as-seen-in .big-heading {
   color: var(--gray-15);
+  margin-top: 0;
 }
 
 .landing-page .big-heading {
@@ -51,18 +52,6 @@ p.caption {
   margin-bottom: 40px;
   line-height: 1.1;
   font-weight: 700;
-}
-
-.campers-images {
-  display: none !important;
-}
-
-@media (min-width: 1200px) {
-  .campers-images {
-    display: inline-block !important;
-    width: 100%;
-    height: 100%;
-  }
 }
 
 .logo-row {
@@ -76,6 +65,12 @@ p.caption {
 
 .logo-row svg {
   height: 40px;
+}
+
+.faq-question {
+  font-weight: bold;
+  font-size: 1.25rem;
+  margin-bottom: 1.2rem;
 }
 
 @media (min-width: 370px) {
@@ -110,6 +105,7 @@ p.caption {
 /* testimonials */
 
 .testimonials-row {
+  --image-size: min(320px, 350px);
   display: flex;
   flex-direction: column;
   justify-content: space-around;
@@ -119,7 +115,6 @@ p.caption {
 
 .testimonials p,
 .testimonials strong {
-  font-family: 'Lato', sans-serif;
   font-size: 1.1rem;
   margin: 0;
   color: var(--quaternary-color);
@@ -129,18 +124,13 @@ p.caption {
 }
 
 .testimonial-card {
-  max-width: 350px;
   display: flex;
-  flex-direction: column;
-  margin: 10px 10px 50px;
-  background: var(--gray-00);
+  width: min(100%, 1170px);
+  margin-top: 10px;
+  margin-bottom: 50px;
+  background-color: var(--primary-background);
   -webkit-box-shadow: 0 3px 13px 1px rgba(0, 0, 0, 0.09);
   box-shadow: 0 3px 13px 1px rgba(0, 0, 0, 0.09);
-}
-
-.testimonial-image,
-.landing-page-image {
-  width: 100%;
 }
 
 .testimonial-meta {
@@ -152,24 +142,23 @@ p.caption {
   padding: 10px 0 30px;
 }
 
+.testimonial-meta h3 {
+  font-size: 1.3rem;
+  font-weight: normal;
+  margin-bottom: 0;
+}
+
 .testimonial-meta p,
 .testimonial-meta strong {
   font-size: 1.2rem;
 }
 
-.testimonial-card-header {
-  height: 100%;
-  padding-bottom: 100%;
-  position: relative;
-  background-color: var(--primary-background);
-}
-
+.testimonial-card-header,
 .testimonial-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: auto;
+  height: var(--image-size);
+  width: var(--image-size);
+  /* Override the default max-width (100%) set by Tailwind */
+  max-width: var(--image-size);
 }
 
 .testimonials-footer {
@@ -178,13 +167,24 @@ p.caption {
   padding: 25px;
   text-align: justify;
   justify-content: center;
-  background-color: var(--primary-background);
 }
+
+.testimony blockquote {
+  padding: 0;
+  border: 0;
+}
+
 .landing-top,
 .as-seen-in,
 .certification-section,
+.benefits,
 .testimonials {
-  padding: 4vw 0;
+  padding: 4vw 15px;
+}
+
+.certification-section,
+.faq-section {
+  padding-inline: 4vw;
 }
 
 .map-ui .btn {
@@ -197,16 +197,14 @@ p.caption {
   }
 }
 
-@media (min-width: 992px) {
+@media (max-width: 992px) {
   .testimonial-card {
-    flex-direction: row;
-    width: auto;
-    max-width: none;
+    flex-direction: column;
+    width: var(--image-size);
   }
-  .testimonial-image {
-    width: auto;
-    height: 100%;
-  }
+}
+
+@media (min-width: 992px) {
   .testimonial-meta {
     padding: 0 0 30px;
   }
@@ -217,9 +215,85 @@ p.caption {
   .testimonials-footer {
     padding: 40px;
   }
-  .testimonial-card-header {
-    height: 350px;
-    min-width: 350px;
-    padding-bottom: 0;
+}
+
+/* AB testing styles */
+.landing-page-b .mega-heading {
+  font-size: 2.2rem;
+  margin: 0px 0px 2rem;
+  font-weight: 700;
+  line-height: 2rem;
+}
+
+.landing-page-b .landing-top .btn-cta-big {
+  max-width: fit-content;
+  padding: 12px 20px;
+}
+
+@media (min-width: 500px) {
+  .landing-page-b .mega-heading {
+    font-size: 3rem;
+    line-height: 2.5rem;
   }
+  .landing-page-b .landing-top .btn-cta-big {
+    padding: 12px 40px;
+  }
+}
+
+.landing-page-b .logo-row-title {
+  font-weight: normal;
+}
+
+.landing-page-b {
+  overflow-x: hidden;
+}
+
+figure.ui-images {
+  position: absolute;
+  left: 50%;
+  height: auto;
+  width: 750px;
+  top: 3vw;
+}
+
+figure.ui-images img {
+  width: 100%;
+  height: auto;
+}
+
+.landing-benefits {
+  display: grid;
+  grid-template-columns: 1fr; /* Default: 1 column */
+  gap: 30px; /* Adjust the space between the grid items */
+}
+
+/* When the screen is larger than 700px */
+@media screen and (min-width: 700px) {
+  .landing-benefits {
+    grid-template-columns: 1fr 1fr; /* Two columns */
+  }
+}
+
+.landing-top figure,
+.landing-top figure img {
+  margin-top: 50px;
+  height: 442px;
+  width: 750px;
+}
+
+.landing-benefits svg path {
+  fill: var(--gray-15);
+}
+
+.benefits-container {
+  background: var(--gray-75);
+}
+
+.benefits-container h2,
+.benefits-container h3 {
+  color: var(--gray-10);
+}
+
+.benefits-container p {
+  color: var(--gray-15);
 }

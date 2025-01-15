@@ -20,7 +20,7 @@ Build an API endpoint, mounted at `GET /name`. Respond with a JSON document, tak
 
 # --hints--
 
-Test 1 : Your API endpoint should respond with the correct name
+Test 1 : Your API endpoint should respond with `{ "name": "Mick Jagger" }` when the `/name` endpoint is called with `?first=Mick&last=Jagger`
 
 ```js
 (getUserInput) =>
@@ -38,7 +38,7 @@ Test 1 : Your API endpoint should respond with the correct name
   );
 ```
 
-Test 2 : Your API endpoint should respond with the correct name
+Test 2 : Your API endpoint should respond with `{ "name": "Keith Richards" }` when the `/name` endpoint is called with `?first=Keith&last=Richards`
 
 ```js
 (getUserInput) =>
@@ -56,12 +56,3 @@ Test 2 : Your API endpoint should respond with the correct name
   );
 ```
 
-# --solutions--
-
-```js
-/**
-  Backend challenges don't need solutions, 
-  because they would need to be tested against a full working project. 
-  Please check our contributing guidelines to learn more.
-*/
-```

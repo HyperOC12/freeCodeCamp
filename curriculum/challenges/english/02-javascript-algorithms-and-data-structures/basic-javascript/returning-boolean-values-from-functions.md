@@ -9,7 +9,7 @@ dashedName: returning-boolean-values-from-functions
 
 # --description--
 
-You may recall from [Comparison with the Equality Operator](/learn/javascript-algorithms-and-data-structures/basic-javascript/comparison-with-the-equality-operator) that all comparison operators return a boolean `true` or `false` value.
+You may recall from <a href="/learn/javascript-algorithms-and-data-structures/basic-javascript/comparison-with-the-equality-operator" target="_blank" rel="noopener noreferrer nofollow">Comparison with the Equality Operator</a> that all comparison operators return a boolean `true` or `false` value.
 
 Sometimes people use an `if/else` statement to do a comparison, like this:
 
@@ -52,7 +52,7 @@ assert(isLess(15, 10) === false);
 You should not use any `if` or `else` statements
 
 ```js
-assert(!/if|else/g.test(code));
+assert(!/if|else/g.test(__helpers.removeJSComments(code)));
 ```
 
 # --seed--

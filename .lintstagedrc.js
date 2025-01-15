@@ -25,7 +25,7 @@ module.exports = {
       ];
     }
   },
-  '*.!(js|ts|tsx)': files => {
+  '*.!(js|ts|tsx|css)': files => {
     if (completedStages.has('not-js')) return [];
 
     if (files.length > 10) {
@@ -43,11 +43,22 @@ module.exports = {
 
     if (files.length > 10) {
       completedStages.add('markdown');
-      return 'npm run lint:challenges';
+      return 'pnpm run lint:challenges';
     } else {
       return files.map(
         filename => `node ./tools/scripts/lint/index.js '${filename}'`
       );
+    }
+  },
+
+  '*.css': files => {
+    if (completedStages.has('css')) return [];
+
+    if (files.length > 10) {
+      completedStages.add('css');
+      return 'pnpm run stylelint --fix .';
+    } else {
+      return files.map(filename => `stylelint '${filename}'`);
     }
   }
 };

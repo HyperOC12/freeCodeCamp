@@ -11,7 +11,7 @@ dashedName: import-a-google-font
 
 In addition to specifying common fonts that are found on most operating systems, we can also specify non-standard, custom web fonts for use on our website. There are many sources for web fonts on the Internet. For this example we will focus on the Google Fonts library.
 
-[Google Fonts](https://fonts.google.com/) is a free library of web fonts that you can use in your CSS by referencing the font's URL.
+Google Fonts is a free library of web fonts that you can use in your CSS by referencing the font's URL.
 
 So, let's go ahead and import and apply a Google font (note that if Google is blocked in your country, you will need to skip this challenge).
 
@@ -40,37 +40,29 @@ Import the `Lobster` font to your web page. Then, use an element selector to set
 You should import the `Lobster` font.
 
 ```js
-assert($('link[href*="googleapis" i]').length);
+assert.exists(document.querySelector('link[href*="googleapis" i]'));
 ```
 
 Your `h2` element should use the font `Lobster`.
 
 ```js
-assert(
-  $('h2')
-    .css('font-family')
-    .match(/lobster/i)
-);
+const h2 = document.querySelector('h2'); 
+const fontFamily = window.getComputedStyle(h2)['font-family']; 
+assert.match(fontFamily, /lobster/i);
 ```
 
 You should only use an `h2` element selector to change the font.
 
 ```js
-assert(
-  /\s*[^\.]h2\s*\{\s*font-family\s*:\s*('|"|)Lobster\1\s*(,\s*('|"|)[a-z -]+\3\s*)?(;\s*\}|\})/gi.test(
-    code
-  )
-);
+assert.match(__helpers.removeHtmlComments(code), /\s*[^\.]h2\s*\{\s*font-family\s*:\s*('|"|)Lobster\1\s*(,\s*('|"|)[a-z -]+\3\s*)?(;\s*\}|\})/gi);
 ```
 
 Your `p` element should still use the font `monospace`.
 
 ```js
-assert(
-  $('p')
-    .css('font-family')
-    .match(/monospace/i)
-);
+const paragraphElement = document.querySelector('p');
+const fontFamily = window.getComputedStyle(paragraphElement)['font-family']; 
+assert.match(fontFamily, /monospace/i);
 ```
 
 # --seed--
@@ -98,7 +90,7 @@ assert(
   <div>
     <p>Things cats love:</p>
     <ul>
-      <li>cat nip</li>
+      <li>catnip</li>
       <li>laser pointers</li>
       <li>lasagna</li>
     </ul>
@@ -150,7 +142,7 @@ assert(
   <div>
     <p>Things cats love:</p>
     <ul>
-      <li>cat nip</li>
+      <li>catnip</li>
       <li>laser pointers</li>
       <li>lasagna</li>
     </ul>

@@ -1,23 +1,3 @@
 {
-  "extends": ["github>freecodecamp/renovate-config"],
-  "packageRules": [
-    {
-      "groupName": "Monaco Editor",
-      "matchPackageNames": [
-        "monaco-editor",
-        "monaco-editor-webpack-plugin",
-        "react-monaco-editor"
-      ]
-    },
-    {
-      "matchPackageNames": ["normalize-url"],
-      "allowedVersions": "<5.0.0"
-    },
-    {
-      "groupName": "CodeSee",
-      "matchPackagePrefixes": ["@codesee/"],
-      "automerge": true
-    }
-  ],
-  "ignorePaths": ["api-server"]
+  "enabled": false
 }

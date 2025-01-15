@@ -2,26 +2,28 @@ import {
   HelpBlock,
   Alert,
   FormGroup,
-  ControlLabel,
+  FormGroupProps,
   FormControl,
-  Button
-} from '@freecodecamp/react-bootstrap';
-import { Link } from 'gatsby';
+  ControlLabel,
+  Button,
+  Spacer
+} from '@freecodecamp/ui';
 import React, { useState } from 'react';
-import { TFunction, Trans, withTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { Trans, withTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import type { Dispatch } from 'redux';
 import isEmail from 'validator/lib/isEmail';
 
-import { updateMyEmail } from '../../redux/settings';
+import { updateMyEmail } from '../../redux/settings/actions';
 import { maybeEmailRE } from '../../utils';
 
 import BlockSaveButton from '../helpers/form/block-save-button';
 import FullWidthRow from '../helpers/full-width-row';
-import Spacer from '../helpers/spacer';
+import Link from '../helpers/link';
 import SectionHeader from './section-header';
-import ToggleSetting from './toggle-setting';
+import ToggleButtonSetting from './toggle-button-setting';
 
 const mapStateToProps = () => ({});
 const mapDispatchToProps = (dispatch: Dispatch) =>
@@ -41,6 +43,11 @@ interface EmailForm {
   newEmail: string;
   confirmNewEmail: string;
   isPristine: boolean;
+}
+
+interface EmailValidation {
+  state: FormGroupProps['validationState'];
+  message: string;
 }
 
 function EmailSettings({
@@ -77,7 +84,7 @@ function EmailSettings({
     };
   }
 
-  function getValidationForNewEmail() {
+  function getValidationForNewEmail(): EmailValidation {
     const { newEmail, currentEmail } = emailForm;
     if (!maybeEmailRE.test(newEmail)) {
       return {
@@ -101,7 +108,7 @@ function EmailSettings({
     }
   }
 
-  function getValidationForConfirmEmail() {
+  function getValidationForConfirmEmail(): EmailValidation {
     const { confirmNewEmail, newEmail } = emailForm;
     if (!maybeEmailRE.test(newEmail)) {
       return {
@@ -132,7 +139,10 @@ function EmailSettings({
     state: confirmEmailValidation,
     message: confirmEmailValidationMessage
   } = getValidationForConfirmEmail();
-
+  const isDisabled =
+    newEmailValidation !== 'success' ||
+    confirmEmailValidation !== 'success' ||
+    isPristine;
   if (!currentEmail) {
     return (
       <div>
@@ -140,11 +150,14 @@ function EmailSettings({
           <p className='large-p text-center'>{t('settings.email.missing')}</p>
         </FullWidthRow>
         <FullWidthRow>
-          <Link style={{ textDecoration: 'none' }} to='/update-email'>
-            <Button block={true} bsSize='lg' bsStyle='primary'>
-              {t('buttons.edit')}
-            </Button>
-          </Link>
+          <Button
+            block={true}
+            size='large'
+            variant='primary'
+            href='/update-email'
+          >
+            {t('buttons.edit')}
+          </Button>
         </FullWidthRow>
       </div>
     );
@@ -156,71 +169,93 @@ function EmailSettings({
         <FullWidthRow>
           <HelpBlock>
             <Alert
-              bsStyle='info'
+              variant='info'
               className='text-center'
-              closeLabel={t('buttons.close')}
+              data-playwright-test-label='email-verification-alert'
             >
               {t('settings.email.not-verified')}
               <br />
               <Trans i18nKey='settings.email.check'>
-                <Link to='/update-email' />
+                <Link
+                  data-playwright-test-label='email-verification-link'
+                  to='/update-email'
+                />
               </Trans>
             </Alert>
           </HelpBlock>
         </FullWidthRow>
       )}
       <FullWidthRow>
-        <form id='form-update-email' onSubmit={handleSubmit}>
+        <form
+          id='form-update-email'
+          {...(!isDisabled
+            ? { onSubmit: handleSubmit }
+            : { onSubmit: e => e.preventDefault() })}
+        >
           <FormGroup controlId='current-email'>
             <ControlLabel>{t('settings.email.current')}</ControlLabel>
             <FormControl.Static>{currentEmail}</FormControl.Static>
           </FormGroup>
-          <FormGroup controlId='new-email' validationState={newEmailValidation}>
-            <ControlLabel>{t('settings.email.new')}</ControlLabel>
-            <FormControl
-              onChange={createHandleEmailFormChange('newEmail')}
-              type='email'
-              value={newEmail}
-            />
-            {newEmailValidationMessage ? (
-              <HelpBlock>{newEmailValidationMessage}</HelpBlock>
-            ) : null}
-          </FormGroup>
-          <FormGroup
-            controlId='confirm-email'
-            validationState={confirmEmailValidation}
-          >
-            <ControlLabel>{t('settings.email.confirm')}</ControlLabel>
-            <FormControl
-              onChange={createHandleEmailFormChange('confirmNewEmail')}
-              type='email'
-              value={confirmNewEmail}
-            />
-            {confirmEmailValidationMessage ? (
-              <HelpBlock>{confirmEmailValidationMessage}</HelpBlock>
-            ) : null}
-          </FormGroup>
+          <div role='group' aria-label={t('settings.email.heading')}>
+            <FormGroup
+              controlId='new-email'
+              validationState={newEmailValidation}
+            >
+              <ControlLabel htmlFor='new-email-input'>
+                {t('settings.email.new')}
+              </ControlLabel>
+              <FormControl
+                onChange={createHandleEmailFormChange('newEmail')}
+                type='email'
+                value={newEmail}
+                id='new-email-input'
+              />
+              {newEmailValidationMessage ? (
+                <HelpBlock data-playwright-test-label='new-email-validation'>
+                  {newEmailValidationMessage}
+                </HelpBlock>
+              ) : null}
+            </FormGroup>
+            <FormGroup
+              controlId='confirm-email'
+              validationState={confirmEmailValidation}
+            >
+              <ControlLabel htmlFor='confirm-email-input'>
+                {t('settings.email.confirm')}
+              </ControlLabel>
+              <FormControl
+                onChange={createHandleEmailFormChange('confirmNewEmail')}
+                type='email'
+                value={confirmNewEmail}
+                id='confirm-email-input'
+              />
+              {confirmEmailValidationMessage ? (
+                <HelpBlock data-playwright-test-label='confirm-email-validation'>
+                  {confirmEmailValidationMessage}
+                </HelpBlock>
+              ) : null}
+            </FormGroup>
+          </div>
           <BlockSaveButton
-            disabled={
-              newEmailValidation !== 'success' ||
-              confirmEmailValidation !== 'success' ||
-              isPristine
-            }
-          />
+            disabled={isDisabled}
+            bgSize='large'
+            {...(isDisabled && { tabIndex: -1 })}
+          >
+            {t('buttons.save')}{' '}
+            <span className='sr-only'>{t('settings.email.heading')}</span>
+          </BlockSaveButton>
         </form>
       </FullWidthRow>
-      <Spacer />
+      <Spacer size='m' />
       <FullWidthRow>
-        <form id='form-quincy-email' onSubmit={handleSubmit}>
-          <ToggleSetting
-            action={t('settings.email.weekly')}
-            flag={sendQuincyEmail}
-            flagName='sendQuincyEmail'
-            offLabel={t('buttons.no-thanks')}
-            onLabel={t('buttons.yes-please')}
-            toggleFlag={() => updateQuincyEmail(!sendQuincyEmail)}
-          />
-        </form>
+        <ToggleButtonSetting
+          action={t('settings.email.weekly')}
+          flag={sendQuincyEmail}
+          flagName='sendQuincyEmail'
+          offLabel={t('buttons.no-thanks')}
+          onLabel={t('buttons.yes-please')}
+          toggleFlag={() => updateQuincyEmail(!sendQuincyEmail)}
+        />
       </FullWidthRow>
     </div>
   );

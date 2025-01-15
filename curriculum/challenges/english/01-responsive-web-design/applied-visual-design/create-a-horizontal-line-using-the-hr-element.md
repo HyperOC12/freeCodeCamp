@@ -15,20 +15,20 @@ You can use the `hr` tag to add a horizontal line across the width of its contai
 
 Add an `hr` tag underneath the `h4` which contains the card title.
 
-**Note:** In HTML, `hr` is a self-closing tag, and therefore doesn't need a separate closing tag.
+**Note:** In HTML, `hr` is a void element, and therefore doesn't need a separate closing tag.
 
 # --hints--
 
 Your code should add an `hr` tag to the markup.
 
 ```js
-assert($('hr').length == 1);
+assert.lengthOf(document.querySelectorAll('hr'),1);
 ```
 
 The `hr` tag should come between the title and the paragraph.
 
 ```js
-assert(code.match(/<\/h4>\s*?<hr(>|\s*?\/>)\s*?<p>/gi));
+assert.match(code,/<\/h4>\s*?<hr(>|\s*?\/>)\s*?<p>/gi);
 ```
 
 # --seed--

@@ -1,4 +1,4 @@
-import envData from '../../../config/env.json';
+import envData from '../../config/env.json';
 
 const { clientLocale } = envData as {
   clientLocale: keyof typeof algoliaIndices;
@@ -15,28 +15,41 @@ const algoliaIndices = {
   },
   chinese: {
     name: 'news-zh',
-    searchPage: 'https://chinese.freecodecamp.org/news/search/'
+    searchPage: 'https://www.freecodecamp.org/chinese/news/search/'
   },
   'chinese-traditional': {
     name: 'news-zh',
-    searchPage: 'https://chinese.freecodecamp.org/news/search'
+    searchPage: 'https://www.freecodecamp.org/chinese/news/search/'
   },
   italian: {
     name: 'news-it',
     searchPage: 'https://www.freecodecamp.org/italian/news/search/'
   },
   portuguese: {
-    name: 'news-pt',
+    name: 'news-pt-br',
     searchPage: 'https://www.freecodecamp.org/portuguese/news/search/'
   },
-  // TODO: Replace with Ukrainian news when we have more useful resources on that instance
   ukrainian: {
+    name: 'news-uk',
+    searchPage: 'https://www.freecodecamp.org/ukrainian/news/search/'
+  },
+  japanese: {
+    name: 'news-ja',
+    searchPage: 'https://www.freecodecamp.org/japanese/news/search/'
+  },
+  korean: {
+    name: 'news-ko',
+    searchPage: 'https://www.freecodecamp.org/korean/news/search/'
+  },
+  // Note: We don't build News for the locales below, so show English
+  // hits and use the English search page
+  german: {
     name: 'news',
     searchPage: 'https://www.freecodecamp.org/news/search/'
   },
-  japanese: {
+  swahili: {
     name: 'news',
-    searchPage: 'https://www.freecodecamp.org/japanese/news/search/'
+    searchPage: 'https://www.freecodecamp.org/news/search/'
   }
 };
 

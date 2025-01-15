@@ -26,7 +26,7 @@ Your code should not use any loop syntax (`for` or `while` or higher order funct
 
 ```js
 assert(
-  !code.match(/for|while|forEach|map|filter|reduce/g)
+  !__helpers.removeJSComments(code).match(/for|while|forEach|map|filter|reduce/g)
 );
 ```
 
@@ -54,6 +54,13 @@ assert.deepStrictEqual(rangeOfNumbers(6, 9), [6, 7, 8, 9]);
 
 ```js
 assert.deepStrictEqual(rangeOfNumbers(4, 4), [4]);
+```
+
+Global variables should not be used to cache the array.
+
+```js
+rangeOfNumbers(1, 3)
+assert.deepStrictEqual(rangeOfNumbers(6, 9), [6, 7, 8, 9]);
 ```
 
 # --seed--

@@ -28,19 +28,21 @@ Create a class called `silver-background` with the `background-color` of `silver
 Your`div` element should have the class `silver-background`.
 
 ```js
-assert($('div').hasClass('silver-background'));
+assert.isTrue(document.querySelector('div').classList.contains('silver-background'));
 ```
 
 Your `div` element should have a silver background.
 
 ```js
-assert($('div').css('background-color') === 'rgb(192, 192, 192)');
+const div = document.querySelector('div');
+const backgroundColor = window.getComputedStyle(div)['background-color']; 
+assert.strictEqual(backgroundColor, 'rgb(192, 192, 192)');
 ```
 
 A class named `silver-background` should be defined within the `style` element and the value of `silver` should be assigned to the `background-color` property.
 
 ```js
-assert(code.match(/\.silver-background\s*{\s*background-color\s*:\s*silver\s*;?\s*}/));
+assert.match(__helpers.removeHtmlComments(code), /\.silver-background\s*{\s*background-color\s*:\s*silver\s*;?\s*}/);
 ```
 
 # --seed--
@@ -84,7 +86,7 @@ assert(code.match(/\.silver-background\s*{\s*background-color\s*:\s*silver\s*;?\
   <div>
     <p>Things cats love:</p>
     <ul>
-      <li>cat nip</li>
+      <li>catnip</li>
       <li>laser pointers</li>
       <li>lasagna</li>
     </ul>
@@ -151,7 +153,7 @@ assert(code.match(/\.silver-background\s*{\s*background-color\s*:\s*silver\s*;?\
   <div class="silver-background">
     <p>Things cats love:</p>
     <ul>
-      <li>cat nip</li>
+      <li>catnip</li>
       <li>laser pointers</li>
       <li>lasagna</li>
     </ul>

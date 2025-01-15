@@ -1,6 +1,6 @@
 ---
 id: 56bbb991ad1ed5201cd392cc
-title: Manipulate Arrays With pop()
+title: Manipulate Arrays With pop Method
 challengeType: 1
 videoUrl: 'https://scrimba.com/c/cRbVZAB'
 forumTopicId: 18236
@@ -47,7 +47,7 @@ assert(
 You should use `pop()` on `myArray`.
 
 ```js
-assert(/removedFromMyArray\s*=\s*myArray\s*.\s*pop\s*(\s*)/.test(code));
+assert(/removedFromMyArray\s*=\s*myArray\s*.\s*pop\s*(\s*)/.test(__helpers.removeJSComments(code)));
 ```
 
 `removedFromMyArray` should only contain `["cat", 2]`.

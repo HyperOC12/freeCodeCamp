@@ -4,9 +4,8 @@ import ReactDOM from 'react-dom';
 
 import { scriptLoader, scriptRemover } from '../../utils/script-loaders';
 
-import type { AddDonationData } from './paypal-button';
+import type { DonationApprovalData } from './types';
 
-/* eslint-disable @typescript-eslint/naming-convention */
 type PayPalButtonScriptLoaderProps = {
   isMinimalForm: boolean | undefined;
   clientId: string;
@@ -30,7 +29,7 @@ type PayPalButtonScriptLoaderProps = {
   ) => unknown;
   isSubscription: boolean;
   onApprove: (
-    data: AddDonationData,
+    data: DonationApprovalData,
     actions?: { order: { capture: () => Promise<unknown> } }
   ) => unknown;
   isPaypalLoading: boolean;
@@ -44,7 +43,6 @@ type PayPalButtonScriptLoaderProps = {
   };
   planId: string | null;
 };
-/* eslint-enable @typescript-eslint/naming-convention */
 
 type PayPalButtonScriptLoaderState = {
   isSdkLoaded: boolean;
@@ -66,7 +64,7 @@ declare global {
   }
 }
 
-export class PayPalButtonScriptLoader extends Component<
+export default class PayPalButtonScriptLoader extends Component<
   PayPalButtonScriptLoaderProps,
   PayPalButtonScriptLoaderState
 > {
@@ -188,7 +186,7 @@ export class PayPalButtonScriptLoader extends Component<
         onApprove={
           isSubscription
             ? (
-                data: AddDonationData,
+                data: DonationApprovalData,
                 actions: { order: { capture: () => Promise<unknown> } }
               ) => onApprove(data, actions)
             : (
@@ -206,7 +204,3 @@ export class PayPalButtonScriptLoader extends Component<
     );
   }
 }
-
-PayPalButtonScriptLoader.displayName = 'PayPalButtonScriptLoader';
-
-export default PayPalButtonScriptLoader;

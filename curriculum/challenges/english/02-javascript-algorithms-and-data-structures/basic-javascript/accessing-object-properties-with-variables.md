@@ -27,24 +27,6 @@ console.log(myBreed);
 
 The string `Doberman` would be displayed in the console.
 
-Another way you can use this concept is when the property's name is collected dynamically during the program execution, as follows:
-
-```js
-const someObj = {
-  propName: "John"
-};
-
-function propPrefix(str) {
-  const s = "prop";
-  return s + str;
-}
-
-const someProp = propPrefix("Name");
-console.log(someObj[someProp]);
-```
-
-`someProp` would have a value of the string `propName`, and the string `John` would be displayed in the console.
-
 Note that we do *not* use quotes around the variable name when using it to access the property because we are using the *value* of the variable, not the *name*.
 
 # --instructions--
@@ -74,19 +56,19 @@ assert(player === 'Montana');
 You should use bracket notation to access `testObj`
 
 ```js
-assert(/testObj\s*?\[.*?\]/.test(code));
+assert(/testObj\s*?\[.*?\]/.test(__helpers.removeJSComments(code)));
 ```
 
 You should not assign the value `Montana` to the variable `player` directly.
 
 ```js
-assert(!code.match(/player\s*=\s*"|\'\s*Montana\s*"|\'\s*;/gi));
+assert(!__helpers.removeJSComments(code).match(/player\s*=\s*"|\'\s*Montana\s*"|\'\s*;/gi));
 ```
 
 You should be using the variable `playerNumber` in your bracket notation
 
 ```js
-assert(/testObj\s*?\[\s*playerNumber\s*\]/.test(code));
+assert(/testObj\s*?\[\s*playerNumber\s*\]/.test(__helpers.removeJSComments(code)));
 ```
 
 # --seed--

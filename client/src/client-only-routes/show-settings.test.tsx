@@ -2,7 +2,7 @@
 // @ts-nocheck Likely need to not use ShallowRenderer
 import React from 'react';
 import ShallowRenderer from 'react-test-renderer/shallow';
-import envData from '../../../config/env.json';
+import envData from '../../config/env.json';
 
 import { ShowSettings } from './show-settings';
 
@@ -42,8 +42,8 @@ const loggedInProps = {
   navigate: navigate,
   showLoading: false,
   submitNewAbout: jest.fn(),
-  toggleNightMode: jest.fn(),
-  updateInternetSettings: jest.fn(),
+  toggleTheme: jest.fn(),
+  updateSocials: jest.fn(),
   updateIsHonest: jest.fn(),
   updatePortfolio: jest.fn(),
   updateQuincyEmail: jest.fn(),

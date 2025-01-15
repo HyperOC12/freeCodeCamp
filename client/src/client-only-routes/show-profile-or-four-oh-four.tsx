@@ -1,28 +1,38 @@
 import { isEmpty } from 'lodash-es';
-import React, { Component } from 'react';
+import React, { useEffect } from 'react';
 import { connect } from 'react-redux';
 
 import { isBrowser } from '../../utils/index';
 import FourOhFour from '../components/FourOhFour';
 import Loader from '../components/helpers/loader';
 import Profile from '../components/profile/profile';
+import { fetchProfileForUser } from '../redux/actions';
+
 import {
+  submitNewAbout,
+  updateMyPortfolio,
+  updateMySocials
+} from '../redux/settings/actions';
+import {
+  usernameSelector,
   userByNameSelector,
-  userProfileFetchStateSelector,
-  fetchProfileForUser,
-  usernameSelector
-} from '../redux';
+  userProfileFetchStateSelector
+} from '../redux/selectors';
 import { User } from '../redux/prop-types';
+import { Socials } from '../components/profile/components/internet';
 
 interface ShowProfileOrFourOhFourProps {
   fetchProfileForUser: (username: string) => void;
+  updateMyPortfolio: () => void;
+  submitNewAbout: () => void;
+  updateMySocials: (formValues: Socials) => void;
   fetchState: {
     pending: boolean;
     complete: boolean;
     errored: boolean;
   };
   isSessionUser: boolean;
-  maybeUser: string;
+  maybeUser?: string;
   requestedUser: User;
   showLoading: boolean;
 }
@@ -53,40 +63,55 @@ const makeMapStateToProps =
 
 const mapDispatchToProps: {
   fetchProfileForUser: ShowProfileOrFourOhFourProps['fetchProfileForUser'];
+  submitNewAbout: () => void;
+  updateMyPortfolio: () => void;
+  updateMySocials: (formValues: Socials) => void;
 } = {
-  fetchProfileForUser
+  fetchProfileForUser,
+  submitNewAbout,
+  updateMyPortfolio,
+  updateMySocials
 };
 
-class ShowProfileOrFourOhFour extends Component<ShowProfileOrFourOhFourProps> {
-  componentDidMount() {
-    const { requestedUser, maybeUser, fetchProfileForUser } = this.props;
+function ShowProfileOrFourOhFour({
+  requestedUser,
+  maybeUser,
+  fetchProfileForUser,
+  submitNewAbout,
+  updateMyPortfolio,
+  updateMySocials,
+  isSessionUser,
+  showLoading
+}: ShowProfileOrFourOhFourProps) {
+  useEffect(() => {
+    // If the user is not already in the store, fetch it
     if (isEmpty(requestedUser)) {
-      fetchProfileForUser(maybeUser);
-    }
-  }
-
-  render() {
-    if (!isBrowser()) {
-      return null;
-    }
-
-    const { isSessionUser, requestedUser, showLoading } = this.props;
-    if (isEmpty(requestedUser)) {
-      if (showLoading) {
-        // We don't know if /:maybeUser is a user or not, we will show
-        // the loader until we get a response from the API
-        return <Loader fullScreen={true} />;
+      if (maybeUser) {
+        fetchProfileForUser(maybeUser);
       }
-      // We have a response from the API, but there is nothing in the store
-      // for /:maybeUser. We can derive from this state the /:maybeUser is not
-      // a user the API recognises, so we 404
-      return <FourOhFour />;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // We have a response from the API, and we have some state in the
-    // store for /:maybeUser, we now handover rendering to the Profile component
-    return <Profile isSessionUser={isSessionUser} user={requestedUser} />;
+  if (!isBrowser()) {
+    return null;
   }
+
+  return isEmpty(requestedUser) ? (
+    showLoading ? (
+      <Loader fullScreen={true} />
+    ) : (
+      <FourOhFour />
+    )
+  ) : (
+    <Profile
+      isSessionUser={isSessionUser}
+      user={requestedUser}
+      submitNewAbout={submitNewAbout}
+      updateMyPortfolio={updateMyPortfolio}
+      updateMySocials={updateMySocials}
+    />
+  );
 }
 
 export default connect(

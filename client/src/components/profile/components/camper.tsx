@@ -1,146 +1,105 @@
-import {
-  faAward,
-  faCalendar,
-  faHeart
-} from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Col, Row } from '@freecodecamp/react-bootstrap';
 import React from 'react';
-import { TFunction, useTranslation } from 'react-i18next';
-
-import envData from '../../../../../config/env.json';
-import { getLangCode } from '../../../../../config/i18n/all-langs';
-import { AvatarRenderer } from '../../helpers';
-import Link from '../../helpers/link';
-import SocialIcons from './social-icons';
-
+import { useTranslation } from 'react-i18next';
+import type { User } from '../../../redux/prop-types';
+import { FullWidthRow } from '../../helpers';
 import './camper.css';
+import SupporterBadgeEmblem from '../../../assets/icons/supporter-badge-emblem';
+import TopContibutorBadgeEmblem from '../../../assets/icons/top-contributor-badge-emblem';
+import Bio from './bio';
 
-const { clientLocale } = envData;
-
-const localeCode = getLangCode(clientLocale);
-
-interface CamperProps {
-  about: string;
-  githubProfile: string;
-  isDonating: boolean;
-  isGithub: boolean;
-  isLinkedIn: boolean;
-  isTwitter: boolean;
-  isWebsite: boolean;
-  joinDate: string;
-  linkedin: string;
-  location: string;
-  name: string;
-  picture: string;
-  points: number | null;
-  twitter: string;
-  username: string;
-  website: string;
-  yearsTopContributor: string[];
-}
-
-function joinArray(array: string[], t: TFunction): string {
-  return array.reduce((string, item, index, array) => {
-    if (string.length > 0) {
-      if (index === array.length - 1) {
-        return `${string} ${t('misc.and')} ${item}`;
-      } else {
-        return `${string}, ${item}`;
-      }
-    } else {
-      return item;
-    }
-  });
-}
-
-function parseDate(joinDate: string, t: TFunction): string {
-  const convertedJoinDate = new Date(joinDate);
-  const date = convertedJoinDate.toLocaleString([localeCode, 'en-US'], {
-    year: 'numeric',
-    month: 'long'
-  });
-  return t('profile.joined', { date: date });
-}
+export type CamperProps = Pick<
+  User,
+  | 'about'
+  | 'githubProfile'
+  | 'isDonating'
+  | 'linkedin'
+  | 'username'
+  | 'twitter'
+  | 'yearsTopContributor'
+  | 'location'
+  | 'website'
+  | 'picture'
+  | 'name'
+  | 'joinDate'
+> & {
+  setIsEditing: (value: boolean) => void;
+  isSessionUser: boolean;
+};
 
 function Camper({
   name,
   username,
   location,
-  points,
   picture,
   about,
   yearsTopContributor,
   githubProfile,
   isDonating,
-  isLinkedIn,
-  isGithub,
-  isTwitter,
-  isWebsite,
   joinDate,
   linkedin,
   twitter,
-  website
+  website,
+  isSessionUser,
+  setIsEditing
 }: CamperProps): JSX.Element {
   const { t } = useTranslation();
-
+  const isTopContributor = yearsTopContributor.filter(Boolean).length > 0;
   return (
-    <div>
-      <Row>
-        <Col className='avatar-camper' xs={12}>
-          <AvatarRenderer
-            isDonating={isDonating}
-            isTopContributor={yearsTopContributor.length > 0}
-            picture={picture}
-            userName={username}
-          />
-        </Col>
-      </Row>
-      <SocialIcons
-        githubProfile={githubProfile}
-        isGithub={isGithub}
-        isLinkedIn={isLinkedIn}
-        isTwitter={isTwitter}
-        isWebsite={isWebsite}
-        linkedin={linkedin}
-        twitter={twitter}
-        username={username}
-        website={website}
-      />
-      <br />
-      <h2 className='text-center username'>@{username}</h2>
-      {name && <p className='text-center name'>{name}</p>}
-      {location && <p className='text-center location'>{location}</p>}
-      {isDonating && (
-        <p className='text-center supporter'>
-          <FontAwesomeIcon icon={faHeart} /> {t('profile.supporter')}
-        </p>
+    <>
+      <div className='bio-container'>
+        <Bio
+          joinDate={joinDate}
+          location={location}
+          username={username}
+          name={name}
+          about={about}
+          githubProfile={githubProfile}
+          linkedin={linkedin}
+          twitter={twitter}
+          website={website}
+          isDonating={isDonating}
+          yearsTopContributor={yearsTopContributor}
+          picture={picture}
+          setIsEditing={setIsEditing}
+          isSessionUser={isSessionUser}
+        />
+      </div>
+      {(isDonating || isTopContributor) && (
+        <FullWidthRow>
+          <section className='card'>
+            <h2>{t('profile.badges')}</h2>
+            <div className='badge-card-container'>
+              {isDonating && (
+                <div className='badge-card'>
+                  <div className='camper-badge'>
+                    <SupporterBadgeEmblem />
+                  </div>
+                  <div className='badge-card-description'>
+                    <h3>{t('profile.supporter')}</h3>
+                    <p>{t('profile.donated')}</p>
+                  </div>
+                </div>
+              )}
+              {isTopContributor && (
+                <div className='badge-card'>
+                  <div className='camper-badge'>
+                    <TopContibutorBadgeEmblem />
+                  </div>
+                  <div className='badge-card-description'>
+                    <h3>{t('profile.contributor')}</h3>
+                    <p>
+                      {t('profile.contributor-prolific', {
+                        year: yearsTopContributor.join(', ')
+                      })}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </FullWidthRow>
       )}
-      {about && <p className='bio text-center'>{about}</p>}
-      {joinDate && (
-        <p className='bio text-center'>
-          <FontAwesomeIcon icon={faCalendar} /> {parseDate(joinDate, t)}
-        </p>
-      )}
-      {yearsTopContributor.filter(Boolean).length > 0 && (
-        <div>
-          <br />
-          <p className='text-center yearsTopContributor'>
-            <FontAwesomeIcon icon={faAward} />{' '}
-            <Link to={t('links:top-contributors')}>
-              {t('profile.contributor')}
-            </Link>
-          </p>
-          <p className='text-center'>{joinArray(yearsTopContributor, t)}</p>
-        </div>
-      )}
-      <br />
-      {typeof points === 'number' ? (
-        <p className='text-center points'>
-          {t('profile.total-points', { count: points })}
-        </p>
-      ) : null}
-    </div>
+    </>
   );
 }
 

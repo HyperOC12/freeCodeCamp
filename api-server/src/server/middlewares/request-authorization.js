@@ -1,12 +1,11 @@
 import { isEmpty } from 'lodash';
 
-import { jwtSecret as _jwtSecret } from '../../../../config/secrets';
+import { jwtSecret as _jwtSecret } from '../../../config/secrets';
 
 import { wrapHandledError } from '../utils/create-handled-error';
 import {
   getAccessTokenFromRequest,
-  errorTypes,
-  authHeaderNS
+  errorTypes
 } from '../utils/getSetAccessToken';
 import { getRedirectParams } from '../utils/redirection';
 import { getUserById as _getUserById } from '../utils/user-stats';
@@ -23,10 +22,11 @@ const signinRE = /^\/signin/;
 const statusRE = /^\/status\/ping$/;
 const unsubscribedRE = /^\/unsubscribed\//;
 const unsubscribeRE = /^\/u\/|^\/unsubscribe\/|^\/ue\//;
-const updateHooksRE = /^\/hooks\/update-paypal$/;
 // note: this would be replaced by webhooks later
 const donateRE = /^\/donate\/charge-stripe$/;
+const paymentIntentRE = /^\/donate\/create-stripe-payment-intent$/;
 const submitCoderoadChallengeRE = /^\/coderoad-challenge-completed$/;
+const mobileLoginRE = /^\/mobile-login\/?$/;
 
 const _pathsAllowedREs = [
   authRE,
@@ -40,9 +40,10 @@ const _pathsAllowedREs = [
   statusRE,
   unsubscribedRE,
   unsubscribeRE,
-  updateHooksRE,
   donateRE,
-  submitCoderoadChallengeRE
+  paymentIntentRE,
+  submitCoderoadChallengeRE,
+  mobileLoginRE
 ];
 
 export function isAllowedPath(path, pathsAllowedREs = _pathsAllowedREs) {
@@ -57,10 +58,7 @@ export default function getRequestAuthorisation({
     const { origin } = getRedirectParams(req);
     const { path } = req;
     if (!isAllowedPath(path)) {
-      const { accessToken, error, jwt } = getAccessTokenFromRequest(
-        req,
-        jwtSecret
-      );
+      const { accessToken, error } = getAccessTokenFromRequest(req, jwtSecret);
       if (!accessToken && error === errorTypes.noTokenFound) {
         throw wrapHandledError(
           new Error('Access token is required for this request'),
@@ -88,7 +86,6 @@ export default function getRequestAuthorisation({
           status: 403
         });
       }
-      res.set(authHeaderNS, jwt);
       if (isEmpty(req.user)) {
         const { userId } = accessToken;
         return getUserById(userId)

@@ -13,7 +13,7 @@ If the `break` statement is omitted from a `switch` statement's `case`, the foll
 
 ```js
 let result = "";
-switch(val) {
+switch (val) {
   case 1:
   case 2:
   case 3:
@@ -94,13 +94,13 @@ assert(sequentialSizes(9) === 'High');
 You should not use any `if` or `else` statements
 
 ```js
-assert(!/else/g.test(code) || !/if/g.test(code));
+assert(!/else/g.test(__helpers.removeJSComments(code)) || !/if/g.test(__helpers.removeJSComments(code)));
 ```
 
 You should have nine `case` statements
 
 ```js
-assert(code.match(/case/g).length === 9);
+assert(__helpers.removeJSComments(code).match(/case/g).length === 9);
 ```
 
 # --seed--
@@ -127,7 +127,7 @@ sequentialSizes(1);
 function sequentialSizes(val) {
   let answer = "";
 
-  switch(val) {
+  switch (val) {
     case 1:
     case 2:
     case 3:

@@ -28,27 +28,23 @@ The existing `input` element should be nested within a `form` element.
 
 ```js
 const inputElem = document.querySelector('form input');
-assert(
-  inputElem.getAttribute('type') === 'text' &&
-    inputElem.getAttribute('placeholder') === 'cat photo URL'
-);
+assert.strictEqual(inputElem.getAttribute('type'),'text'); 
+assert.strictEqual(inputElem.getAttribute('placeholder'),'cat photo URL');
 ```
 
 Your `form` should have an `action` attribute which is set to `https://www.freecatphotoapp.com/submit-cat-photo`.
 
 ```js
-const action = $('form').attr('action');
-assert(action.match(/^https:\/\/(www\.)?freecatphotoapp\.com\/submit-cat-photo$/i))
+const action = document.querySelector('form').getAttribute('action');
+assert.match(action,/^https:\/\/(www\.)?freecatphotoapp\.com\/submit-cat-photo$/i);
 ```
 
 Your `form` element should have well-formed open and close tags.
 
 ```js
-assert(
-  code.match(/<\/form>/g) &&
-    code.match(/<form [^<]*>/g) &&
-    code.match(/<\/form>/g).length === code.match(/<form [^<]*>/g).length
-);
+assert.match(code,/<\/form>/g);
+assert.match(code,/<form [^<]*>/g);
+assert.strictEqual(code.match(/<\/form>/g).length,code.match(/<form [^<]*>/g).length);
 ```
 
 # --seed--
@@ -64,7 +60,7 @@ assert(
 
   <p>Things cats love:</p>
   <ul>
-    <li>cat nip</li>
+    <li>catnip</li>
     <li>laser pointers</li>
     <li>lasagna</li>
   </ul>
@@ -89,7 +85,7 @@ assert(
 
   <p>Things cats love:</p>
   <ul>
-    <li>cat nip</li>
+    <li>catnip</li>
     <li>laser pointers</li>
     <li>lasagna</li>
   </ul>

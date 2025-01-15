@@ -8,12 +8,13 @@ dashedName: demographic-data-analyzer
 
 # --description--
 
-You will be [working on this project with our Replit starter code](https://replit.com/github/freeCodeCamp/boilerplate-demographic-data-analyzer).
+You will be <a href="https://gitpod.io/?autostart=true#https://github.com/freeCodeCamp/boilerplate-demographic-data-analyzer/" target="_blank" rel="noopener noreferrer nofollow">working on this project with our Gitpod starter code</a>.
 
 We are still developing the interactive instructional part of the Python curriculum. For now, here are some videos on the freeCodeCamp.org YouTube channel that will teach you everything you need to know to complete this project:
 
-- [Python for Everybody Video Course](https://www.freecodecamp.org/news/python-for-everybody/) (14 hours)
-- [Learn Python Video Course](https://www.freecodecamp.org/news/learn-python-video-course/) (10 hours)
+- <a href="https://www.freecodecamp.org/news/python-for-everybody/" target="_blank" rel="noopener noreferrer nofollow">Python for Everybody Video Course</a> (14 hours)
+
+- <a href="https://www.freecodecamp.org/news/how-to-analyze-data-with-python-pandas/" target="_blank" rel="noopener noreferrer nofollow">How to Analyze Data with Python Pandas</a> (10 hours)
 
 # --instructions--
 
@@ -41,17 +42,15 @@ You must use Pandas to answer the following questions:
 - What country has the highest percentage of people that earn >50K and what is that percentage?
 - Identify the most popular occupation for those who earn >50K in India.
 
-Use the starter code in the file `demographic_data_analyzer`. Update the code so all variables set to "None" are set to the appropriate calculation or code. Round all decimals to the nearest tenth.
-
-Unit tests are written for you under `test_module.py`.
+Use the starter code in the file `demographic_data_analyzer.py`. Update the code so all variables set to `None` are set to the appropriate calculation or code. Round all decimals to the nearest tenth.
 
 ## Development
 
-For development, you can use `main.py` to test your functions. Click the "run" button and `main.py` will run.
+Write your code in `demographic_data_analyzer.py`. For development, you can use `main.py` to test your code.
 
 ## Testing
 
-We imported the tests from `test_module.py` to `main.py` for your convenience. The tests will run automatically whenever you hit the "run" button.
+The unit tests for this project are in `test_module.py`. We imported the tests from `test_module.py` to `main.py` for your convenience.
 
 ## Submitting
 
@@ -59,7 +58,7 @@ Copy your project's URL and submit it to freeCodeCamp.
 
 ## Dataset Source
 
-Dua, D. and Graff, C. (2019). [UCI Machine Learning Repository](http://archive.ics.uci.edu/ml). Irvine, CA: University of California, School of Information and Computer Science.
+Dua, D. and Graff, C. (2019). <a href="http://archive.ics.uci.edu/ml" target="_blank" rel="noopener noreferrer nofollow">UCI Machine Learning Repository</a>. Irvine, CA: University of California, School of Information and Computer Science.
 
 # --hints--
 

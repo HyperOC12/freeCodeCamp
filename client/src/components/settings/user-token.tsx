@@ -1,13 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Button, Panel } from '@freecodecamp/react-bootstrap';
 import React, { Component } from 'react';
-import { TFunction, withTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { withTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
+import { Panel, Button, Spacer } from '@freecodecamp/ui';
 
-import { deleteUserToken } from '../../redux';
-import { ButtonSpacer, FullWidthRow, Spacer } from '../helpers';
-
-import './user-token.css';
+import { deleteUserToken } from '../../redux/actions';
+import { FullWidthRow } from '../helpers';
 
 type UserTokenProps = {
   deleteUserToken: () => void;
@@ -29,30 +27,28 @@ class UserToken extends Component<UserTokenProps> {
     const { t } = this.props;
 
     return (
-      <div className='user-token text-center'>
-        <FullWidthRow>
-          <Panel className='user-panel'>
-            <Panel.Heading>{t('user-token.title')}</Panel.Heading>
-            <Spacer />
+      <FullWidthRow>
+        <Panel variant='info' className='text-center'>
+          <Panel.Heading>{t('user-token.title')}</Panel.Heading>
+          <Spacer size='m' />
+          <Panel.Body>
             <p>{t('user-token.delete-p1')}</p>
             <FullWidthRow>
-              <ButtonSpacer />
+              <Spacer size='xs' />
               <Button
                 block={true}
-                bsSize='lg'
-                bsStyle='danger'
-                className='btn-info'
-                data-cy='delete-user-token'
+                size='large'
+                variant='info'
                 onClick={this.deleteToken}
                 type='button'
               >
                 {t('user-token.delete')}
               </Button>
-              <Spacer />
+              <Spacer size='m' />
             </FullWidthRow>
-          </Panel>
-        </FullWidthRow>
-      </div>
+          </Panel.Body>
+        </Panel>
+      </FullWidthRow>
     );
   }
 }

@@ -4,6 +4,9 @@ client/public
 .git
 .gitignore
 .dockerignore
-*Dockerfile*
-*docker-compose*
+docker/**/Dockerfile
+**/*docker-compose*
 **/node_modules
+.eslintcache
+api/__mocks__
+api/src/exam-environment/seed

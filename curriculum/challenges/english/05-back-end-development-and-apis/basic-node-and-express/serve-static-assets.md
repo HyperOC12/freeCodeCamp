@@ -40,12 +40,25 @@ Your app should serve asset files from the `/public` directory to the `/public` 
   );
 ```
 
-# --solutions--
+Your app should not serve files from any other folders except from `/public` directory 
 
 ```js
-/**
-  Backend challenges don't need solutions, 
-  because they would need to be tested against a full working project. 
-  Please check our contributing guidelines to learn more.
-*/
+(getUserInput) =>
+  $.get(getUserInput('url') + '/server.js').then(
+    (data) => {
+       assert.equal(
+        data?.status + '',
+        404 + '',
+        'Your app must serve files only from "public" directory'
+      );
+    },
+    (xhr) => {
+      assert.equal(
+        xhr?.status + '',
+        404 + '',
+        'Your app must serve files only from "public" directory'
+      );
+    }
+  );
 ```
+

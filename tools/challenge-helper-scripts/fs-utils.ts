@@ -1,4 +1,4 @@
-import { SuperBlocks } from '../../config/certification-settings';
+import { SuperBlocks } from '../../shared/config/curriculum';
 
 export function getSuperBlockSubPath(superBlock: SuperBlocks): string {
   const pathMap = {
@@ -15,7 +15,18 @@ export function getSuperBlockSubPath(superBlock: SuperBlocks): string {
     [SuperBlocks.CodingInterviewPrep]: '10-coding-interview-prep',
     [SuperBlocks.MachineLearningPy]: '11-machine-learning-with-python',
     [SuperBlocks.RelationalDb]: '13-relational-databases',
-    [SuperBlocks.RespWebDesignNew]: '14-responsive-web-design-22'
+    [SuperBlocks.RespWebDesignNew]: '14-responsive-web-design-22',
+    [SuperBlocks.JsAlgoDataStructNew]:
+      '15-javascript-algorithms-and-data-structures-22',
+    [SuperBlocks.TheOdinProject]: '16-the-odin-project',
+    [SuperBlocks.CollegeAlgebraPy]: '17-college-algebra-with-python',
+    [SuperBlocks.ProjectEuler]: '18-project-euler',
+    [SuperBlocks.FoundationalCSharp]: '19-foundational-c-sharp-with-microsoft',
+    [SuperBlocks.A2English]: '21-a2-english-for-developers',
+    [SuperBlocks.RosettaCode]: '22-rosetta-code',
+    [SuperBlocks.PythonForEverybody]: '23-python-for-everybody',
+    [SuperBlocks.B1English]: '24-b1-english-for-developers',
+    [SuperBlocks.FullStackDeveloper]: '25-front-end-development'
   };
   return pathMap[superBlock];
 }

@@ -1,14 +1,15 @@
 {
-  "name": "Build a Number Guessing Game Project",
+  "name": "Number Guessing Game",
   "isUpcomingChange": false,
+  "dashedName": "build-a-number-guessing-game-project",
   "order": 13,
-  "time": "30 hours",
-  "template": "",
-  "required": [],
+  "helpCategory": "Backend Development",
   "superBlock": "relational-database",
   "challengeOrder": [
-    [
-      "602da04c22201c65d2a019f4",
-      "Build a Number Guessing Game"
-    ]
-  ]}
+    {
+      "id": "602da04c22201c65d2a019f4",
+      "title": "Build a Number Guessing Game"
+    }
+  ],
+  "blockLayout": "project-list"
+}

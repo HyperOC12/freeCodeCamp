@@ -1,15 +1,20 @@
 import { graphql } from 'gatsby';
-import React, { Component } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Helmet from 'react-helmet';
-import { TFunction, withTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
 import { HandlerProps } from 'react-reflex';
-import Media from 'react-responsive';
+import { useMediaQuery } from 'react-responsive';
 import { bindActionCreators, Dispatch } from 'redux';
 import { createStructuredSelector } from 'reselect';
 import store from 'store';
-import { challengeTypes } from '../../../../utils/challenge-types';
+import { editor } from 'monaco-editor';
+import type { FitAddon } from 'xterm-addon-fit';
+
+import { useFeature } from '@growthbook/growthbook-react';
+import { challengeTypes } from '../../../../../shared/config/challenge-types';
 import LearnLayout from '../../../components/layouts/learn';
+import { MAX_MOBILE_WIDTH } from '../../../../config/misc';
 
 import {
   ChallengeFiles,
@@ -21,47 +26,54 @@ import {
   Test
 } from '../../../redux/prop-types';
 import { isContained } from '../../../utils/is-contained';
-import ChallengeDescription from '../components/Challenge-Description';
-import Hotkeys from '../components/Hotkeys';
-import ResetModal from '../components/ResetModal';
+import ChallengeDescription from '../components/challenge-description';
+import Hotkeys from '../components/hotkeys';
+import ResetModal from '../components/reset-modal';
 import ChallengeTitle from '../components/challenge-title';
 import CompletionModal from '../components/completion-modal';
 import HelpModal from '../components/help-modal';
-import Notes from '../components/notes';
+import ShortcutsModal from '../components/shortcuts-modal';
 import Output from '../components/output';
-import Preview from '../components/preview';
+import Preview, { type PreviewProps } from '../components/preview';
 import ProjectPreviewModal from '../components/project-preview-modal';
 import SidePanel from '../components/side-panel';
 import VideoModal from '../components/video-modal';
 import {
   cancelTests,
-  challengeFilesSelector,
   challengeMounted,
-  challengeTestsSelector,
-  consoleOutputSelector,
   createFiles,
   executeChallenge,
   initConsole,
   initTests,
-  isChallengeCompletedSelector,
+  initVisibleEditors,
   previewMounted,
   updateChallengeMeta,
   openModal,
-  setEditorFocusability
-} from '../redux';
-import { savedChallengesSelector } from '../../../redux';
+  setEditorFocusability,
+  setIsAdvancing
+} from '../redux/actions';
+import {
+  challengeFilesSelector,
+  consoleOutputSelector,
+  isChallengeCompletedSelector
+} from '../redux/selectors';
+import { savedChallengesSelector } from '../../../redux/selectors';
 import { getGuideUrl } from '../utils';
-import MultifileEditor from './MultifileEditor';
+import { preloadPage } from '../../../../utils/gatsby/page-loading';
+import envData from '../../../../config/env.json';
+import ToolPanel from '../components/tool-panel';
+import { getChallengePaths } from '../utils/challenge-paths';
+import { XtermTerminal } from './xterm';
+import MultifileEditor from './multifile-editor';
 import DesktopLayout from './desktop-layout';
 import MobileLayout from './mobile-layout';
+import { mergeChallengeFiles } from './saved-challenges';
 
 import './classic.css';
 import '../components/test-frame.css';
 
-// Redux Setup
 const mapStateToProps = createStructuredSelector({
   challengeFiles: challengeFilesSelector,
-  tests: challengeTestsSelector,
   output: consoleOutputSelector,
   isChallengeCompleted: isChallengeCompletedSelector,
   savedChallenges: savedChallengesSelector
@@ -73,19 +85,20 @@ const mapDispatchToProps = (dispatch: Dispatch) =>
       createFiles,
       initConsole,
       initTests,
+      initVisibleEditors,
       updateChallengeMeta,
       challengeMounted,
       executeChallenge,
       cancelTests,
       previewMounted,
       openModal,
-      setEditorFocusability
+      setEditorFocusability,
+      setIsAdvancing
     },
     dispatch
   );
 
-// Types
-interface ShowClassicProps {
+interface ShowClassicProps extends Pick<PreviewProps, 'previewMounted'> {
   cancelTests: () => void;
   challengeMounted: (arg0: string) => void;
   createFiles: (arg0: ChallengeFiles | SavedChallengeFiles) => void;
@@ -94,27 +107,20 @@ interface ShowClassicProps {
   challengeFiles: ChallengeFiles;
   initConsole: (arg0: string) => void;
   initTests: (tests: Test[]) => void;
+  initVisibleEditors: () => void;
   isChallengeCompleted: boolean;
   output: string[];
   pageContext: {
     challengeMeta: ChallengeMeta;
     projectPreview: {
       challengeData: CompletedChallenge;
-      showProjectPreview: boolean;
     };
   };
-  t: TFunction;
-  tests: Test[];
   updateChallengeMeta: (arg0: ChallengeMeta) => void;
   openModal: (modal: string) => void;
   setEditorFocusability: (canFocus: boolean) => void;
-  previewMounted: () => void;
+  setIsAdvancing: (arg: boolean) => void;
   savedChallenges: CompletedChallenge[];
-}
-
-interface ShowClassicState {
-  layout: ReflexLayout;
-  resizing: boolean;
 }
 
 interface ReflexLayout {
@@ -126,7 +132,11 @@ interface ReflexLayout {
   testsPane: { flex: number };
 }
 
-const MAX_MOBILE_WIDTH = 767;
+interface RenderEditorArgs {
+  isMobileLayout: boolean;
+  isUsingKeyboardInTablist: boolean;
+}
+
 const REFLEX_LAYOUT = 'challenge-layout';
 const BASE_LAYOUT = {
   codePane: { flex: 1 },
@@ -137,410 +147,420 @@ const BASE_LAYOUT = {
   testsPane: { flex: 0.3 }
 };
 
-// Component
-class ShowClassic extends Component<ShowClassicProps, ShowClassicState> {
-  static displayName: string;
-  containerRef: React.RefObject<HTMLElement>;
-  editorRef: React.RefObject<HTMLElement>;
-  instructionsPanelRef: React.RefObject<HTMLDivElement>;
-  resizeProps: ResizeProps;
-
-  constructor(props: ShowClassicProps) {
-    super(props);
-
-    this.resizeProps = {
-      onStopResize: this.onStopResize.bind(this),
-      onResize: this.onResize.bind(this)
-    };
-
-    // layout: Holds the information of the panes sizes for desktop view
-    this.state = {
-      layout: this.getLayoutState(),
-      resizing: false
-    };
-
-    this.containerRef = React.createRef();
-    this.editorRef = React.createRef();
-    this.instructionsPanelRef = React.createRef();
+// Used to prevent monaco from stealing mouse/touch events on the upper jaw
+// content widget so they can trigger their default actions. (Issue #46166)
+const handleContentWidgetEvents = (e: MouseEvent | TouchEvent): void => {
+  const target = e.target as HTMLElement;
+  if (target?.closest('.editor-upper-jaw')) {
+    e.stopPropagation();
   }
+};
 
-  getLayoutState(): ReflexLayout {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const reflexLayout: ReflexLayout = store.get(REFLEX_LAYOUT);
+const StepPreview = ({
+  disableIframe,
+  previewMounted,
+  challengeType,
+  xtermFitRef
+}: Pick<PreviewProps, 'disableIframe' | 'previewMounted'> & {
+  challengeType: number;
+  xtermFitRef: React.MutableRefObject<FitAddon | null>;
+}) => {
+  return challengeType === challengeTypes.python ||
+    challengeType === challengeTypes.multifilePythonCertProject ? (
+    <XtermTerminal xtermFitRef={xtermFitRef} />
+  ) : (
+    <Preview disableIframe={disableIframe} previewMounted={previewMounted} />
+  );
+};
 
-    // Validate if user has not done any resize of the panes
-    if (!reflexLayout) return BASE_LAYOUT;
+// The newline is important, because this text ends up in a `pre` element.
+const defaultOutput = `
+/**
+* Your test output will go here
+*/`;
+
+function ShowClassic({
+  challengeFiles,
+  data: {
+    challengeNode: {
+      challenge: {
+        challengeFiles: seedChallengeFiles,
+        block,
+        demoType,
+        title,
+        description,
+        instructions,
+        fields: { tests, blockName },
+        challengeType,
+        hasEditableBoundaries,
+        superBlock,
+        helpCategory,
+        forumTopicId,
+        usesMultifileEditor,
+        notes,
+        videoUrl,
+        translationPending
+      }
+    }
+  },
+  pageContext: {
+    challengeMeta,
+    challengeMeta: { isFirstStep, nextChallengePath },
+    projectPreview: { challengeData }
+  },
+  createFiles,
+  cancelTests,
+  challengeMounted,
+  initConsole,
+  initTests,
+  initVisibleEditors,
+  updateChallengeMeta,
+  openModal,
+  setIsAdvancing,
+  savedChallenges,
+  isChallengeCompleted,
+  output,
+  executeChallenge,
+  previewMounted
+}: ShowClassicProps) {
+  const { t } = useTranslation();
+  const [resizing, setResizing] = useState(false);
+  const [usingKeyboardInTablist, setUsingKeyboardInTablist] = useState(false);
+  const containerRef = useRef<HTMLElement>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor>();
+  const instructionsPanelRef = useRef<HTMLDivElement>(null);
+  const xtermFitRef = useRef<FitAddon | null>(null);
+  const isMobile = useMediaQuery({
+    query: `(max-width: ${MAX_MOBILE_WIDTH}px)`
+  });
+
+  const guideUrl = getGuideUrl({ forumTopicId, title });
+
+  const blockNameTitle = `${t(
+    `intro:${superBlock}.blocks.${block}.title`
+  )}: ${title}`;
+  const windowTitle = `${blockNameTitle} | freeCodeCamp.org`;
+  const showConsole = challengeType === challengeTypes.js;
+  // TODO: show preview should NOT be computed like this. That determination is
+  // made during the build (at least twice!). It should be either a prop or
+  // computed from challengeType
+  const showPreview = [
+    challengeTypes.html,
+    challengeTypes.modern,
+    challengeTypes.multifileCertProject,
+    challengeTypes.multifilePythonCertProject,
+    challengeTypes.python,
+    challengeTypes.lab
+  ].includes(challengeType);
+  const getLayoutState = () => {
+    const reflexLayout = store.get(REFLEX_LAYOUT) as ReflexLayout | null;
 
     // Check that the layout values stored are valid (exist in base layout). If
     // not valid, it will fallback to the base layout values and be set on next
     // user resize.
-    const isValidLayout = isContained(
-      Object.keys(BASE_LAYOUT),
-      Object.keys(reflexLayout)
-    );
+    const isValidLayout =
+      reflexLayout &&
+      isContained(Object.keys(BASE_LAYOUT), Object.keys(reflexLayout));
+
+    if (!isValidLayout) store.remove(REFLEX_LAYOUT);
 
     return isValidLayout ? reflexLayout : BASE_LAYOUT;
-  }
+  };
 
-  onResize() {
-    this.setState(state => ({ ...state, resizing: true }));
-  }
+  const onPreviewResize = () => xtermFitRef.current?.fit();
 
-  onStopResize(event: HandlerProps) {
-    // @ts-expect-error TODO: Apparently, name does not exist on type
+  // layout: Holds the information of the panes sizes for desktop view
+  const [layout, setLayout] = useState(getLayoutState());
+
+  const onStopResize = (event: HandlerProps) => {
+    setResizing(false);
+    // 'name' is used to identify the Elements whose layout is stored.
     const { name, flex } = event.component.props;
 
-    // Only interested in tracking layout updates for ReflexElement's
-    if (!name) {
-      this.setState(state => ({ ...state, resizing: false }));
-      return;
-    }
-
-    // Forcing a state update with the value of each panel since on stop resize
-    // is executed per each panel.
-    const newLayout =
-      typeof this.state.layout === 'object'
-        ? {
-            ...this.state.layout,
-            [name]: { flex }
-          }
-        : this.state.layout;
-
-    this.setState({
-      layout: newLayout,
-      resizing: false
+    // onStopResize can be called multiple times before the state changes, so
+    // we need an updater function to ensure all updates are applied.
+    setLayout(l => {
+      const newLayout = name ? { ...l, [name]: { flex } } : l;
+      store.set(REFLEX_LAYOUT, newLayout);
+      return newLayout;
     });
+  };
 
-    store.set(REFLEX_LAYOUT, this.state.layout);
-  }
+  const setHtmlHeight = () => {
+    const vh = String(window.innerHeight - 1);
+    document.documentElement.style.height = vh + 'px';
+  };
+  const onResize = () => {
+    setResizing(true);
+  };
+  const resizeProps: ResizeProps = {
+    onResize,
+    onStopResize
+  };
 
-  componentDidMount() {
-    const {
-      data: {
-        challengeNode: {
-          challenge: { title }
-        }
-      }
-    } = this.props;
-    this.initializeComponent(title);
-  }
+  const updateUsingKeyboardInTablist = (
+    usingKeyboardInTablist: boolean
+  ): void => {
+    setUsingKeyboardInTablist(usingKeyboardInTablist);
+  };
 
-  componentDidUpdate(prevProps: ShowClassicProps) {
-    const {
-      data: {
-        challengeNode: {
-          challenge: {
-            title: prevTitle,
-            fields: { tests: prevTests }
-          }
-        }
-      }
-    } = prevProps;
-    const {
-      data: {
-        challengeNode: {
-          challenge: {
-            title: currentTitle,
-            fields: { tests: currTests }
-          }
-        }
-      }
-    } = this.props;
-    if (prevTitle !== currentTitle || prevTests !== currTests) {
-      this.initializeComponent(currentTitle);
+  // AB testing Pre-fetch in the Spanish locale
+  const isPreFetchEnabled = useFeature('prefetch_ab_test').on;
+  useEffect(() => {
+    if (isPreFetchEnabled && envData.clientLocale === 'espanol') {
+      preloadPage(nextChallengePath);
     }
-  }
+  }, [nextChallengePath, isPreFetchEnabled]);
 
-  initializeComponent(title: string) {
-    const {
-      challengeMounted,
-      createFiles,
-      initConsole,
-      initTests,
-      updateChallengeMeta,
-      openModal,
-      savedChallenges,
-      data: {
-        challengeNode: {
-          challenge: {
-            challengeFiles,
-            fields: { tests },
-            challengeType,
-            removeComments,
-            helpCategory
-          }
-        }
-      },
-      pageContext: {
-        challengeMeta,
-        projectPreview: { showProjectPreview }
-      }
-    } = this.props;
+  useEffect(() => {
+    initializeComponent(title);
+    // Bug fix for the monaco content widget and touch devices/right mouse
+    // click. (Issue #46166)
+    document.addEventListener('mousedown', handleContentWidgetEvents, true);
+    document.addEventListener('contextmenu', handleContentWidgetEvents, true);
+    document.addEventListener('touchstart', handleContentWidgetEvents, true);
+    document.addEventListener('touchmove', handleContentWidgetEvents, true);
+    document.addEventListener('touchend', handleContentWidgetEvents, true);
+
+    window.addEventListener('resize', setHtmlHeight);
+    setHtmlHeight();
+
+    return () => {
+      createFiles([]);
+      cancelTests();
+      document.removeEventListener(
+        'mousedown',
+        handleContentWidgetEvents,
+        true
+      );
+      document.removeEventListener(
+        'contextmenu',
+        handleContentWidgetEvents,
+        true
+      );
+      document.removeEventListener(
+        'touchstart',
+        handleContentWidgetEvents,
+        true
+      );
+      document.removeEventListener(
+        'touchmove',
+        handleContentWidgetEvents,
+        true
+      );
+      document.removeEventListener('touchend', handleContentWidgetEvents, true);
+      window.removeEventListener('resize', setHtmlHeight);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const initializeComponent = (title: string): void => {
     initConsole('');
 
     const savedChallenge = savedChallenges?.find(challenge => {
       return challenge.id === challengeMeta.id;
     });
 
-    createFiles(savedChallenge?.challengeFiles || challengeFiles || []);
+    createFiles(
+      mergeChallengeFiles(seedChallengeFiles, savedChallenge?.challengeFiles)
+    );
 
     initTests(tests);
-    if (showProjectPreview) openModal('projectPreview');
+
+    initVisibleEditors();
+
+    // Typically, this kind of preview only appears on the first step of a
+    // project and is shown (once) automatically. In contrast, labs are more
+    // freeform, so the preview is shown on demand.
+    if (demoType === 'onLoad') openModal('projectPreview');
+    const challengePaths = getChallengePaths({
+      currentCurriculumPaths: challengeMeta
+    });
+
     updateChallengeMeta({
       ...challengeMeta,
       title,
-      removeComments: removeComments !== false,
       challengeType,
-      helpCategory
+      helpCategory,
+      ...challengePaths
     });
     challengeMounted(challengeMeta.id);
-  }
+    setIsAdvancing(false);
+  };
 
-  componentWillUnmount() {
-    const { createFiles, cancelTests } = this.props;
-    createFiles([]);
-    cancelTests();
-  }
-
-  getChallenge = () => this.props.data.challengeNode.challenge;
-
-  getBlockNameTitle(t: TFunction) {
-    const { block, superBlock, title } = this.getChallenge();
-    return `${t(`intro:${superBlock}.blocks.${block}.title`)}: ${title}`;
-  }
-
-  getVideoUrl = () => this.getChallenge().videoUrl;
-
-  hasPreview() {
-    const { challengeType } = this.getChallenge();
-    return (
-      challengeType === challengeTypes.html ||
-      challengeType === challengeTypes.modern ||
-      challengeType === challengeTypes.multifileCertProject
-    );
-  }
-
-  renderInstructionsPanel({ showToolPanel }: { showToolPanel: boolean }) {
-    const {
-      block,
-      challengeType,
-      description,
-      forumTopicId,
-      instructions,
-      superBlock,
-      title,
-      translationPending
-    } = this.getChallenge();
-
-    const showBreadCrumbs =
-      challengeType !== challengeTypes.multifileCertProject;
+  const renderInstructionsPanel = ({
+    toolPanel,
+    hasDemo
+  }: {
+    toolPanel: React.ReactNode;
+    hasDemo: boolean;
+  }) => {
     return (
       <SidePanel
-        block={block}
         challengeDescription={
           <ChallengeDescription
-            block={block}
             description={description}
             instructions={instructions}
+            superBlock={superBlock}
           />
         }
         challengeTitle={
           <ChallengeTitle
-            block={block}
-            isCompleted={this.props.isChallengeCompleted}
-            showBreadCrumbs={showBreadCrumbs}
-            superBlock={superBlock}
+            isCompleted={isChallengeCompleted}
             translationPending={translationPending}
           >
             {title}
           </ChallengeTitle>
         }
-        guideUrl={getGuideUrl({ forumTopicId, title })}
-        instructionsPanelRef={this.instructionsPanelRef}
-        showToolPanel={showToolPanel}
-        videoUrl={this.getVideoUrl()}
+        instructionsPanelRef={instructionsPanelRef}
+        toolPanel={toolPanel}
+        hasDemo={hasDemo}
       />
     );
-  }
+  };
 
-  renderEditor() {
-    const {
-      pageContext: {
-        projectPreview: { showProjectPreview }
-      },
-      challengeFiles,
-      data: {
-        challengeNode: {
-          challenge: {
-            fields: { tests },
-            usesMultifileEditor
-          }
-        }
-      }
-    } = this.props;
-    const { description, title } = this.getChallenge();
+  const renderEditor = ({
+    isMobileLayout,
+    isUsingKeyboardInTablist
+  }: RenderEditorArgs) => {
     return (
       challengeFiles && (
         <MultifileEditor
           challengeFiles={challengeFiles}
-          containerRef={this.containerRef}
+          block={block}
+          superBlock={superBlock}
+          containerRef={containerRef}
           description={description}
-          editorRef={this.editorRef}
+          editorRef={editorRef}
           initialTests={tests}
-          resizeProps={this.resizeProps}
+          isMobileLayout={isMobileLayout}
+          isUsingKeyboardInTablist={isUsingKeyboardInTablist}
+          resizeProps={resizeProps}
           title={title}
           usesMultifileEditor={usesMultifileEditor}
-          showProjectPreview={showProjectPreview}
+          showProjectPreview={demoType === 'onLoad'}
         />
       )
     );
-  }
+  };
 
-  renderTestOutput() {
-    const { output, t } = this.props;
-    return (
-      <Output
-        defaultOutput={`
-/**
-* ${t('learn.test-output')}
-*/
-`}
-        output={output}
-      />
-    );
-  }
-
-  renderNotes(notes?: string) {
-    return <Notes notes={notes} />;
-  }
-
-  renderPreview() {
-    return (
-      <Preview
-        className='full-height'
-        disableIframe={this.state.resizing}
-        previewMounted={this.props.previewMounted}
-      />
-    );
-  }
-
-  render() {
-    const {
-      block,
-      challengeType,
-      fields: { blockName },
-      forumTopicId,
-      hasEditableBoundaries,
-      superBlock,
-      certification,
-      title,
-      usesMultifileEditor,
-      notes
-    } = this.getChallenge();
-    const {
-      executeChallenge,
-      pageContext: {
-        challengeMeta: { nextChallengePath, prevChallengePath },
-        projectPreview: { challengeData, showProjectPreview }
-      },
-      challengeFiles,
-      t
-    } = this.props;
-
-    return (
-      <Hotkeys
-        editorRef={this.editorRef}
-        executeChallenge={executeChallenge}
-        innerRef={this.containerRef}
-        instructionsPanelRef={this.instructionsPanelRef}
-        nextChallengePath={nextChallengePath}
-        prevChallengePath={prevChallengePath}
-        usesMultifileEditor={usesMultifileEditor}
-      >
-        <LearnLayout>
-          <Helmet title={`${this.getBlockNameTitle(t)} | freeCodeCamp.org`} />
-          <Media maxWidth={MAX_MOBILE_WIDTH}>
-            <MobileLayout
-              editor={this.renderEditor()}
-              guideUrl={getGuideUrl({ forumTopicId, title })}
-              hasEditableBoundaries={hasEditableBoundaries}
-              hasNotes={!!notes}
-              hasPreview={this.hasPreview()}
-              instructions={this.renderInstructionsPanel({
-                showToolPanel: false
-              })}
-              notes={this.renderNotes(notes)}
-              preview={this.renderPreview()}
-              testOutput={this.renderTestOutput()}
-              usesMultifileEditor={usesMultifileEditor}
-              videoUrl={this.getVideoUrl()}
-            />
-          </Media>
-          <Media minWidth={MAX_MOBILE_WIDTH + 1}>
-            <DesktopLayout
-              block={block}
-              challengeFiles={challengeFiles}
-              challengeType={challengeType}
-              editor={this.renderEditor()}
-              hasEditableBoundaries={hasEditableBoundaries}
-              hasNotes={!!notes}
-              hasPreview={this.hasPreview()}
-              instructions={this.renderInstructionsPanel({
-                showToolPanel: true
-              })}
-              layoutState={this.state.layout}
-              notes={this.renderNotes(notes)}
-              preview={this.renderPreview()}
-              resizeProps={this.resizeProps}
-              superBlock={superBlock}
-              testOutput={this.renderTestOutput()}
-            />
-          </Media>
-          <CompletionModal
-            block={block}
-            blockName={blockName}
-            certification={certification}
-            superBlock={superBlock}
+  return (
+    <Hotkeys
+      challengeType={challengeType}
+      executeChallenge={executeChallenge}
+      containerRef={containerRef}
+      instructionsPanelRef={instructionsPanelRef}
+      usesMultifileEditor={usesMultifileEditor}
+      editorRef={editorRef}
+    >
+      <LearnLayout hasEditableBoundaries={hasEditableBoundaries}>
+        <Helmet title={windowTitle} />
+        {isMobile && (
+          <MobileLayout
+            editor={renderEditor({
+              isMobileLayout: true,
+              isUsingKeyboardInTablist: usingKeyboardInTablist
+            })}
+            hasEditableBoundaries={hasEditableBoundaries}
+            hasPreview={showPreview}
+            instructions={renderInstructionsPanel({
+              toolPanel: null,
+              hasDemo: demoType === 'onClick'
+            })}
+            notes={notes}
+            onPreviewResize={onPreviewResize}
+            preview={
+              <StepPreview
+                challengeType={challengeType}
+                disableIframe={resizing}
+                previewMounted={previewMounted}
+                xtermFitRef={xtermFitRef}
+              />
+            }
+            windowTitle={windowTitle}
+            testOutput={
+              <Output defaultOutput={defaultOutput} output={output} />
+            }
+            toolPanel={
+              <ToolPanel guideUrl={guideUrl} isMobile videoUrl={videoUrl} />
+            }
+            updateUsingKeyboardInTablist={updateUsingKeyboardInTablist}
+            usesMultifileEditor={usesMultifileEditor}
           />
-          <HelpModal />
-          <VideoModal videoUrl={this.getVideoUrl()} />
-          <ResetModal />
-          <ProjectPreviewModal
-            challengeData={challengeData}
-            closeText={t('buttons.start-coding')}
-            previewTitle={t('learn.project-preview-title')}
-            showProjectPreview={showProjectPreview}
+        )}
+        {!isMobile && (
+          <DesktopLayout
+            challengeFiles={challengeFiles}
+            challengeType={challengeType}
+            editor={renderEditor({
+              isMobileLayout: false,
+              isUsingKeyboardInTablist: usingKeyboardInTablist
+            })}
+            hasEditableBoundaries={hasEditableBoundaries}
+            hasPreview={showPreview}
+            instructions={renderInstructionsPanel({
+              toolPanel: <ToolPanel guideUrl={guideUrl} videoUrl={videoUrl} />,
+              hasDemo: demoType === 'onClick'
+            })}
+            isFirstStep={isFirstStep}
+            layoutState={layout}
+            notes={notes}
+            onPreviewResize={onPreviewResize}
+            preview={
+              <StepPreview
+                challengeType={challengeType}
+                disableIframe={resizing}
+                previewMounted={previewMounted}
+                xtermFitRef={xtermFitRef}
+              />
+            }
+            resizeProps={resizeProps}
+            testOutput={
+              <Output defaultOutput={defaultOutput} output={output} />
+            }
+            windowTitle={windowTitle}
+            startWithConsoleShown={showConsole}
           />
-        </LearnLayout>
-      </Hotkeys>
-    );
-  }
+        )}
+        <CompletionModal />
+        <HelpModal challengeTitle={title} challengeBlock={blockName} />
+        <VideoModal videoUrl={videoUrl} />
+        <ResetModal challengeType={challengeType} />
+        <ProjectPreviewModal
+          challengeData={challengeData}
+          closeText={t('buttons.start-coding')}
+          previewTitle={
+            demoType === 'onClick'
+              ? t('learn.demo-project-title')
+              : t('learn.project-preview-title')
+          }
+        />
+        <ShortcutsModal />
+      </LearnLayout>
+    </Hotkeys>
+  );
 }
 
 ShowClassic.displayName = 'ShowClassic';
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(withTranslation()(ShowClassic));
+export default connect(mapStateToProps, mapDispatchToProps)(ShowClassic);
 
 export const query = graphql`
-  query ClassicChallenge($slug: String!) {
-    challengeNode(challenge: { fields: { slug: { eq: $slug } } }) {
+  query ClassicChallenge($id: String!) {
+    challengeNode(id: { eq: $id }) {
       challenge {
         block
+        demoType
         title
         description
         id
         hasEditableBoundaries
         instructions
         notes
-        removeComments
         challengeType
         helpCategory
         videoUrl
         superBlock
-        certification
         translationPending
         forumTopicId
         fields {

@@ -19,7 +19,7 @@ You should add a new `img` element.
 assert(document.querySelectorAll('img')?.length === 1);
 ```
 
-Your `img` element should come before your first `.key` element.
+Your `img` element should come before your first `.keys` element.
 
 ```js
 const img = document.querySelector('img');
@@ -27,7 +27,7 @@ assert(img?.nextElementSibling?.className === 'keys');
 assert(img?.previousElementSibling === null);
 ```
 
-Your `img` element should have a `class` set to logo.
+Your `img` element should have a `class` set to `logo`.
 
 ```js
 const img = document.querySelector('img');
@@ -59,7 +59,7 @@ assert(document.querySelector('img')?.getAttribute('alt') === 'freeCodeCamp Logo
 
 ```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>Piano</title>

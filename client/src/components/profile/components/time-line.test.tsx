@@ -4,10 +4,9 @@ import { useStaticQuery } from 'gatsby';
 import React from 'react';
 
 import { render, screen } from '../../../../utils/test-utils';
-import { createStore } from '../../../redux/createStore';
+import { createStore } from '../../../redux/create-store';
 import TimeLine from './time-line';
 
-jest.mock('react-ga');
 const store = createStore();
 
 beforeEach(() => {
@@ -57,26 +56,12 @@ describe('<TimeLine />', () => {
   it('Render button when only solution is present', () => {
     // @ts-expect-error
     render(<TimeLine {...propsForOnlySolution} />, store);
-    const showViewButton = screen.getByRole('link', { name: 'buttons.view' });
+    const showViewButton = screen.getByRole('link', {
+      name: 'buttons.view settings.labels.solution-for (aria.opens-new-window)'
+    });
     expect(showViewButton).toHaveAttribute(
       'href',
       'https://github.com/freeCodeCamp/freeCodeCamp'
-    );
-  });
-
-  it('Render button when both githubLink and solution is present', () => {
-    // @ts-expect-error
-    render(<TimeLine {...propsForOnlySolution} />, store);
-
-    const menuItems = screen.getAllByRole('menuitem');
-    expect(menuItems).toHaveLength(2);
-    expect(menuItems[0]).toHaveAttribute(
-      'href',
-      'https://github.com/freeCodeCamp/freeCodeCamp1'
-    );
-    expect(menuItems[1]).toHaveAttribute(
-      'href',
-      'https://github.com/freeCodeCamp/freeCodeCamp2'
     );
   });
 
@@ -84,8 +69,12 @@ describe('<TimeLine />', () => {
     // @ts-expect-error
     render(<TimeLine {...propsForOnlySolution} />, store);
 
-    const button = screen.getByText('buttons.show-code');
-    expect(button).toBeInTheDocument();
+    const viewButtons = screen.getAllByRole('button', {
+      name: 'buttons.view settings.labels.solution-for'
+    });
+    viewButtons.forEach(button => {
+      expect(button).toBeInTheDocument();
+    });
   });
 });
 

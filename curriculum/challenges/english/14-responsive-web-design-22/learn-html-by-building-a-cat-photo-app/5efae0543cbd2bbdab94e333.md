@@ -1,13 +1,15 @@
 ---
 id: 5efae0543cbd2bbdab94e333
-title: Step 29
+title: Step 32
 challengeType: 0
-dashedName: step-29
+dashedName: step-32
 ---
 
 # --description--
 
-To improve accessibility of the image you just added, add an `alt` attribute with the text `Five cats looking around a field.`
+To improve accessibility of the image you added, add an `alt` attribute with the text:
+
+`Five cats looking around a field.`
 
 # --hints--
 
@@ -17,7 +19,7 @@ Your `figure` element should have an opening tag. Opening tags have this syntax:
 assert(document.querySelectorAll('figure').length === 2);
 ```
 
-Your `ol` element should have a closing tag. Closing tags have a `/` just after the `<` character.
+Your `figure` element should have a closing tag. Closing tags have a `/` just after the `<` character.
 
 ```js
 assert(code.match(/<\/figure>/g).length === 2);
@@ -26,7 +28,7 @@ assert(code.match(/<\/figure>/g).length === 2);
 There should be a `figure` element right above the last `section` element's closing tag.
 
 ```js
-assert($('main > section')[1].lastElementChild.nodeName === 'FIGURE');
+assert.strictEqual(document.querySelectorAll('main > section')?.[1]?.lastElementChild?.nodeName, 'FIGURE');
 ```
 
 The Cats `img` element should be nested in the `figure` element.
@@ -58,12 +60,12 @@ assert(
 ```html
 <html>
   <body>
-    <h1>CatPhotoApp</h1>
     <main>
+      <h1>CatPhotoApp</h1>
       <section>
         <h2>Cat Photos</h2>
-        <!-- TODO: Add link to cat photos -->
-        <p>Click here to view more <a target="_blank" href="https://freecatphotoapp.com">cat photos</a>.</p>
+        <p>Everyone loves <a href="https://cdn.freecodecamp.org/curriculum/cat-photo-app/running-cats.jpg">cute cats</a> online!</p>
+        <p>See more <a target="_blank" href="https://freecatphotoapp.com">cat photos</a> in our gallery.</p>
         <a href="https://freecatphotoapp.com"><img src="https://cdn.freecodecamp.org/curriculum/cat-photo-app/relaxing-cat.jpg" alt="A cute orange cat lying on its back."></a>
       </section>
       <section>

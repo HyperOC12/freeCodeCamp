@@ -3,23 +3,25 @@
  * Any ref to fixCompletedChallengesItem should be removed post
  * a db migration to fix all completedChallenges
  *
+ * NOTE: it's been 4 years, so any active users will have been migrated. We
+ * should still try to migrate the rest at some point.
+ *
  */
 import debug from 'debug';
 import dedent from 'dedent';
-import { isEmpty, pick, omit, find, uniqBy } from 'lodash';
+import { isEmpty, pick, omit, uniqBy } from 'lodash';
 import { ObjectID } from 'mongodb';
-import { Observable } from 'rx';
 import isNumeric from 'validator/lib/isNumeric';
 import isURL from 'validator/lib/isURL';
-
+import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
-import { jwtSecret } from '../../../../config/secrets';
 
-import { environment, deploymentEnv } from '../../../../config/env.json';
+import { jwtSecret } from '../../../config/secrets';
+import { challengeTypes } from '../../../../shared/config/challenge-types';
+
 import {
-  fixCompletedChallengeItem,
   fixPartiallyCompletedChallengeItem,
-  fixSavedChallengeItem
+  fixCompletedExamItem
 } from '../../common/utils';
 import { getChallenges } from '../utils/get-curriculum';
 import { ifNoUserSend } from '../utils/middleware';
@@ -28,6 +30,13 @@ import {
   normalizeParams,
   getPrefixedLandingPath
 } from '../utils/redirection';
+import { generateRandomExam, createExamResults } from '../utils/exam';
+import {
+  validateExamFromDbSchema,
+  validateExamResultsSchema,
+  validateGeneratedExamSchema,
+  validateUserCompletedExamSchema
+} from '../utils/exam-schemas';
 
 const log = debug('fcc:boot:challenges');
 
@@ -35,9 +44,8 @@ export default async function bootChallenge(app, done) {
   const send200toNonUser = ifNoUserSend(true);
   const api = app.loopback.Router();
   const router = app.loopback.Router();
-  const challengeUrlResolver = await createChallengeUrlResolver(
-    getChallenges()
-  );
+  const challengeUrlResolver =
+    await createChallengeUrlResolver(getChallenges());
   const redirectToCurrentChallenge = createRedirectToCurrentChallenge(
     challengeUrlResolver,
     normalizeParams,
@@ -65,6 +73,18 @@ export default async function bootChallenge(app, done) {
     backendChallengeCompleted
   );
 
+  const generateExam = createGenerateExam(app);
+
+  api.get('/exam/:id', send200toNonUser, generateExam);
+
+  const examChallengeCompleted = createExamChallengeCompleted(app);
+
+  api.post(
+    '/exam-challenge-completed',
+    send200toNonUser,
+    examChallengeCompleted
+  );
+
   api.post(
     '/save-challenge',
     send200toNonUser,
@@ -77,6 +97,14 @@ export default async function bootChallenge(app, done) {
   const coderoadChallengeCompleted = createCoderoadChallengeCompleted(app);
 
   api.post('/coderoad-challenge-completed', coderoadChallengeCompleted);
+
+  const msTrophyChallengeCompleted = createMsTrophyChallengeCompleted(app);
+
+  api.post(
+    '/ms-trophy-challenge-completed',
+    send200toNonUser,
+    msTrophyChallengeCompleted
+  );
 
   app.use(api);
   app.use(router);
@@ -92,35 +120,30 @@ const jsCertProjectIds = [
 ];
 
 const multifileCertProjectIds = getChallenges()
-  .filter(challenge => challenge.challengeType === 14)
+  .filter(
+    challenge => challenge.challengeType === challengeTypes.multifileCertProject
+  )
+  .map(challenge => challenge.id);
+
+const multifilePythonCertProjectIds = getChallenges()
+  .filter(
+    challenge =>
+      challenge.challengeType === challengeTypes.multifilePythonCertProject
+  )
   .map(challenge => challenge.id);
 
 const savableChallenges = getChallenges()
-  .filter(challenge => challenge.challengeType === 14)
+  .filter(challenge => {
+    return (
+      challenge.challengeType === challengeTypes.multifileCertProject ||
+      challenge.challengeType === challengeTypes.multifilePythonCertProject
+    );
+  })
   .map(challenge => challenge.id);
 
-function buildNewSavedChallenges({
-  user,
-  challengeId,
-  completedDate = Date.now(),
-  files
-}) {
-  const { savedChallenges } = user;
-  const challengeToSave = {
-    id: challengeId,
-    lastSavedDate: completedDate,
-    files: files?.map(file =>
-      pick(file, ['contents', 'key', 'name', 'ext', 'history'])
-    )
-  };
-
-  const newSavedChallenges = uniqBy(
-    [challengeToSave, ...savedChallenges.map(fixSavedChallengeItem)],
-    'id'
-  );
-
-  return newSavedChallenges;
-}
+const msTrophyChallenges = getChallenges()
+  .filter(challenge => challenge.challengeType === challengeTypes.msTrophy)
+  .map(({ id, msTrophyId }) => ({ id, msTrophyId }));
 
 export function buildUserUpdate(
   user,
@@ -132,7 +155,8 @@ export function buildUserUpdate(
   let completedChallenge = {};
   if (
     jsCertProjectIds.includes(challengeId) ||
-    multifileCertProjectIds.includes(challengeId)
+    multifileCertProjectIds.includes(challengeId) ||
+    multifilePythonCertProjectIds.includes(challengeId)
   ) {
     completedChallenge = {
       ..._completedChallenge,
@@ -144,77 +168,138 @@ export function buildUserUpdate(
     completedChallenge = omit(_completedChallenge, ['files']);
   }
   let finalChallenge;
-  const updateData = {};
-  const { timezone: userTimezone, completedChallenges = [] } = user;
+  const $push = {},
+    $set = {},
+    $pull = {};
+  const {
+    timezone: userTimezone,
+    completedChallenges = [],
+    needsModeration = false,
+    savedChallenges = []
+  } = user;
 
-  const oldChallenge = find(
-    completedChallenges,
+  const oldIndex = completedChallenges.findIndex(
     ({ id }) => challengeId === id
   );
-  const alreadyCompleted = !!oldChallenge;
+
+  const alreadyCompleted = oldIndex !== -1;
+  const oldChallenge = alreadyCompleted ? completedChallenges[oldIndex] : null;
 
   if (alreadyCompleted) {
     finalChallenge = {
       ...completedChallenge,
       completedDate: oldChallenge.completedDate
     };
+    $set[`completedChallenges.${oldIndex}`] = finalChallenge;
   } else {
-    updateData.$push = {
-      ...updateData.$push,
-      progressTimestamps: completedDate
-    };
     finalChallenge = {
       ...completedChallenge
     };
+    $push.progressTimestamps = completedDate;
+    $push.completedChallenges = finalChallenge;
   }
 
-  let newSavedChallenges;
-
   if (savableChallenges.includes(challengeId)) {
-    newSavedChallenges = buildNewSavedChallenges({
-      user,
-      challengeId,
-      completedDate,
-      files
-    });
-
-    // if savableChallenge, update saved array when submitting
-    updateData.$set = {
-      completedChallenges: uniqBy(
-        [finalChallenge, ...completedChallenges.map(fixCompletedChallengeItem)],
-        'id'
-      ),
-      savedChallenges: newSavedChallenges
-    };
-  } else {
-    updateData.$set = {
-      completedChallenges: uniqBy(
-        [finalChallenge, ...completedChallenges.map(fixCompletedChallengeItem)],
-        'id'
+    const challengeToSave = {
+      id: challengeId,
+      lastSavedDate: completedDate,
+      files: files?.map(file =>
+        pick(file, ['contents', 'key', 'name', 'ext', 'history'])
       )
     };
+
+    const savedIndex = savedChallenges.findIndex(
+      ({ id }) => challengeId === id
+    );
+
+    if (savedIndex >= 0) {
+      $set[`savedChallenges.${savedIndex}`] = challengeToSave;
+      savedChallenges[savedIndex] = challengeToSave;
+    } else {
+      $push.savedChallenges = challengeToSave;
+      savedChallenges.push(challengeToSave);
+    }
   }
 
   // remove from partiallyCompleted on submit
-  updateData.$pull = {
-    partiallyCompletedChallenges: { id: challengeId }
-  };
+  $pull.partiallyCompletedChallenges = { id: challengeId };
 
   if (
     timezone &&
     timezone !== 'UTC' &&
     (!userTimezone || userTimezone === 'UTC')
   ) {
-    updateData.$set = {
-      ...updateData.$set,
-      timezone: userTimezone
-    };
+    $set.timezone = userTimezone;
   }
+
+  if (needsModeration) $set.needsModeration = true;
+
+  const updateData = {};
+  if (!isEmpty($set)) updateData.$set = $set;
+  if (!isEmpty($push)) updateData.$push = $push;
+  if (!isEmpty($pull)) updateData.$pull = $pull;
+
   return {
     alreadyCompleted,
     updateData,
     completedDate: finalChallenge.completedDate,
-    savedChallenges: newSavedChallenges
+    savedChallenges
+  };
+}
+
+export function buildExamUserUpdate(user, _completedChallenge) {
+  const {
+    id,
+    challengeType,
+    completedDate = Date.now(),
+    examResults
+  } = _completedChallenge;
+
+  let finalChallenge = { id, challengeType, completedDate, examResults };
+
+  const { completedChallenges = [] } = user;
+  const $push = {},
+    $set = {};
+
+  // Always push to completedExams[] to keep a record of all submissions, it may come in handy.
+  $push.completedExams = fixCompletedExamItem(_completedChallenge);
+
+  let alreadyCompleted = false;
+  let addPoint = false;
+
+  // completedChallenges[] should have their best exam
+  if (examResults.passed) {
+    const alreadyCompletedIndex = completedChallenges.findIndex(
+      challenge => challenge.id === id
+    );
+
+    alreadyCompleted = alreadyCompletedIndex !== -1;
+
+    if (alreadyCompleted) {
+      const { percentCorrect } = examResults;
+      const oldChallenge = completedChallenges[alreadyCompletedIndex];
+      const oldResults = oldChallenge.examResults;
+
+      // only update if it's a better result
+      if (percentCorrect > oldResults.percentCorrect) {
+        finalChallenge.completedDate = oldChallenge.completedDate;
+        $set[`completedChallenges.${alreadyCompletedIndex}`] = finalChallenge;
+      }
+    } else {
+      addPoint = true;
+      $push.completedChallenges = finalChallenge;
+    }
+  }
+
+  const updateData = {};
+  if (!isEmpty($set)) updateData.$set = $set;
+  if (!isEmpty($push)) updateData.$push = $push;
+
+  return {
+    alreadyCompleted,
+    addPoint,
+    updateData,
+    completedDate: finalChallenge.completedDate
   };
 }
 
@@ -268,7 +353,7 @@ export async function createChallengeUrlResolver(
 
 export function isValidChallengeCompletion(req, res, next) {
   const {
-    body: { id, challengeType, solution }
+    body: { id, challengeType, solution, githubLink }
   } = req;
 
   // ToDO: Validate other things (challengeFiles, etc)
@@ -285,69 +370,79 @@ export function isValidChallengeCompletion(req, res, next) {
     log('challengeType', challengeType, isNumeric(challengeType));
     return res.status(403).json(isValidChallengeCompletionErrorMsg);
   }
-  if ('solution' in req.body && !isURL(solution)) {
+  // If `backEndProject`:
+  // - `solution` needs to exist, but does not have to be valid URL
+  // - `githubLink` needs to exist and be valid URL
+  if (challengeType === challengeTypes.backEndProject) {
+    if (!solution || !isURL(githubLink + '')) {
+      log('isObjectId', id, ObjectID.isValid(id));
+      return res.status(403).json(isValidChallengeCompletionErrorMsg);
+    }
+  } else if ('solution' in req.body && !isURL(solution)) {
     log('isObjectId', id, ObjectID.isValid(id));
     return res.status(403).json(isValidChallengeCompletionErrorMsg);
   }
   return next();
 }
 
-export function modernChallengeCompleted(req, res, next) {
+export async function modernChallengeCompleted(req, res, next) {
   const user = req.user;
-  return user
-    .getCompletedChallenges$()
-    .flatMap(() => {
-      const completedDate = Date.now();
-      const { id, files, challengeType } = req.body;
 
-      const completedChallenge = {
-        id,
-        files,
-        completedDate
-      };
+  try {
+    // This is an ugly way to update `user.completedChallenges`
+    await user.getCompletedChallenges$().toPromise();
+  } catch (e) {
+    return next(e);
+  }
 
-      // if multifile cert project
-      if (challengeType === 14) {
-        completedChallenge.isManuallyApproved = false;
-      }
+  const completedDate = Date.now();
+  const { id, files, challengeType } = req.body;
 
-      // We only need to know the challenge type if it's a project. If it's a
-      // step or normal challenge we can avoid storing in the database.
-      if (
-        jsCertProjectIds.includes(id) ||
-        multifileCertProjectIds.includes(id)
-      ) {
-        completedChallenge.challengeType = challengeType;
-      }
+  const completedChallenge = {
+    id,
+    files,
+    completedDate
+  };
 
-      const { alreadyCompleted, savedChallenges, updateData } = buildUserUpdate(
-        user,
-        id,
-        completedChallenge
-      );
+  // if multifile cert project
+  if (challengeType === 14) {
+    completedChallenge.isManuallyApproved = false;
+    user.needsModeration = true;
+  }
 
-      const points = alreadyCompleted ? user.points : user.points + 1;
-      const updatePromise = new Promise((resolve, reject) =>
-        user.updateAttributes(updateData, err => {
-          if (err) {
-            return reject(err);
-          }
-          return resolve();
-        })
-      );
-      return Observable.fromPromise(updatePromise).map(() => {
-        return res.json({
-          points,
-          alreadyCompleted,
-          completedDate,
-          savedChallenges
-        });
-      });
-    })
-    .subscribe(() => {}, next);
+  // We only need to know the challenge type if it's a project. If it's a
+  // step or normal challenge we can avoid storing in the database.
+  if (
+    jsCertProjectIds.includes(id) ||
+    multifileCertProjectIds.includes(id) ||
+    multifilePythonCertProjectIds.includes(id)
+  ) {
+    completedChallenge.challengeType = challengeType;
+  }
+
+  const { alreadyCompleted, savedChallenges, updateData } = buildUserUpdate(
+    user,
+    id,
+    completedChallenge
+  );
+
+  const points = alreadyCompleted ? user.points : user.points + 1;
+
+  user.updateAttributes(updateData, err => {
+    if (err) {
+      return next(err);
+    }
+
+    return res.json({
+      points,
+      alreadyCompleted,
+      completedDate,
+      savedChallenges
+    });
+  });
 }
 
-function projectCompleted(req, res, next) {
+async function projectCompleted(req, res, next) {
   const { user, body = {} } = req;
 
   const completedChallenge = pick(body, [
@@ -359,7 +454,11 @@ function projectCompleted(req, res, next) {
   ]);
   completedChallenge.completedDate = Date.now();
 
-  if (!completedChallenge.solution) {
+  if (
+    !completedChallenge.solution ||
+    (completedChallenge.challengeType === challengeTypes.backEndProject &&
+      !completedChallenge.githubLink)
+  ) {
     return res.status(403).json({
       type: 'error',
       message:
@@ -388,105 +487,403 @@ function projectCompleted(req, res, next) {
     }
   }
 
-  return user
-    .getCompletedChallenges$()
-    .flatMap(() => {
-      const { alreadyCompleted, updateData } = buildUserUpdate(
-        user,
-        completedChallenge.id,
-        completedChallenge
-      );
+  try {
+    // This is an ugly hack to update `user.completedChallenges`
+    await user.getCompletedChallenges$().toPromise();
+  } catch (e) {
+    return next(e);
+  }
 
-      const updatePromise = new Promise((resolve, reject) =>
-        user.updateAttributes(updateData, err => {
-          if (err) {
-            return reject(err);
-          }
-          return resolve();
-        })
-      );
-      return Observable.fromPromise(updatePromise).doOnNext(() => {
-        return res.json({
-          alreadyCompleted,
-          points: alreadyCompleted ? user.points : user.points + 1,
-          completedDate: completedChallenge.completedDate
-        });
-      });
-    })
-    .subscribe(() => {}, next);
+  const { alreadyCompleted, updateData } = buildUserUpdate(
+    user,
+    completedChallenge.id,
+    completedChallenge
+  );
+
+  user.updateAttributes(updateData, err => {
+    if (err) {
+      return next(err);
+    }
+
+    return res.json({
+      alreadyCompleted,
+      points: alreadyCompleted ? user.points : user.points + 1,
+      completedDate: completedChallenge.completedDate
+    });
+  });
 }
 
-function backendChallengeCompleted(req, res, next) {
+async function backendChallengeCompleted(req, res, next) {
   const { user, body = {} } = req;
 
   const completedChallenge = pick(body, ['id', 'solution']);
   completedChallenge.completedDate = Date.now();
 
-  return user
-    .getCompletedChallenges$()
-    .flatMap(() => {
+  try {
+    await user.getCompletedChallenges$().toPromise();
+  } catch (e) {
+    return next(e);
+  }
+
+  const { alreadyCompleted, updateData } = buildUserUpdate(
+    user,
+    completedChallenge.id,
+    completedChallenge
+  );
+
+  user.updateAttributes(updateData, err => {
+    if (err) {
+      return next(err);
+    }
+
+    return res.json({
+      alreadyCompleted,
+      points: alreadyCompleted ? user.points : user.points + 1,
+      completedDate: completedChallenge.completedDate
+    });
+  });
+}
+
+// TODO: send flash message keys to client so they can be i18n
+function createGenerateExam(app) {
+  const { Exam } = app.models;
+
+  return async function generateExam(req, res, next) {
+    const {
+      user,
+      params: { id }
+    } = req;
+
+    try {
+      await user.getCompletedChallenges$().toPromise();
+    } catch (e) {
+      return next(e);
+    }
+
+    try {
+      const examFromDb = await Exam.findById(id);
+      if (!examFromDb) {
+        res.status(500);
+        throw new Error(
+          `An error occurred trying to get the exam from the database.`
+        );
+      }
+
+      // This is cause there was struggles validating the exam directly from the db/loopback
+      const examJson = JSON.parse(JSON.stringify(examFromDb));
+
+      const validExamFromDbSchema = validateExamFromDbSchema(examJson);
+
+      if (validExamFromDbSchema.error) {
+        res.status(500);
+        log(validExamFromDbSchema.error);
+        throw new Error(
+          `An error occurred validating the exam information from the database.`
+        );
+      }
+
+      const { prerequisites, numberOfQuestionsInExam, title } = examJson;
+
+      // Validate User has completed prerequisite challenges
+      prerequisites?.forEach(prerequisite => {
+        const prerequisiteCompleted = user.completedChallenges.find(
+          challenge => challenge.id === prerequisite.id
+        );
+
+        if (!prerequisiteCompleted) {
+          res.status(403);
+          throw new Error(
+            `You have not completed the required challenges to start the '${title}'.`
+          );
+        }
+      });
+
+      const randomizedExam = generateRandomExam(examJson);
+
+      const validGeneratedExamSchema = validateGeneratedExamSchema(
+        randomizedExam,
+        numberOfQuestionsInExam
+      );
+
+      if (validGeneratedExamSchema.error) {
+        res.status(500);
+        log(validGeneratedExamSchema.error);
+        throw new Error(`An error occurred trying to randomize the exam.`);
+      }
+
+      return res.send({ generatedExam: randomizedExam });
+    } catch (err) {
+      log(err);
+      return res.send({ error: err.message });
+    }
+  };
+}
+
+function createExamChallengeCompleted(app) {
+  const { Exam } = app.models;
+
+  return async function examChallengeCompleted(req, res, next) {
+    const { body = {}, user } = req;
+
+    try {
+      await user.getCompletedChallenges$().toPromise();
+    } catch (e) {
+      return next(e);
+    }
+
+    const { userCompletedExam = [], id } = body;
+
+    try {
+      const examFromDb = await Exam.findById(id);
+      if (!examFromDb) {
+        res.status(500);
+        throw new Error(
+          `An error occurred tryng to get the exam from the database.`
+        );
+      }
+
+      // This is cause there was struggles validating the exam directly from the db/loopback
+      const examJson = JSON.parse(JSON.stringify(examFromDb));
+
+      const validExamFromDbSchema = validateExamFromDbSchema(examJson);
+      if (validExamFromDbSchema.error) {
+        res.status(500);
+        log(validExamFromDbSchema.error);
+        throw new Error(
+          `An error occurred validating the exam information from the database.`
+        );
+      }
+
+      const { prerequisites, numberOfQuestionsInExam, title } = examJson;
+
+      // Validate User has completed prerequisite challenges
+      prerequisites?.forEach(prerequisite => {
+        const prerequisiteCompleted = user.completedChallenges.find(
+          challenge => challenge.id === prerequisite.id
+        );
+
+        if (!prerequisiteCompleted) {
+          res.status(403);
+          throw new Error(
+            `You have not completed the required challenges to start the '${title}'.`
+          );
+        }
+      });
+
+      // Validate user completed exam
+      const validUserCompletedExam = validateUserCompletedExamSchema(
+        userCompletedExam,
+        numberOfQuestionsInExam
+      );
+      if (validUserCompletedExam.error) {
+        res.status(400);
+        log(validUserCompletedExam.error);
+        throw new Error(`An error occurred validating the submitted exam.`);
+      }
+
+      const examResults = createExamResults(userCompletedExam, examJson);
+
+      const validExamResults = validateExamResultsSchema(examResults);
+      if (validExamResults.error) {
+        res.status(500);
+        log(validExamResults.error);
+        throw new Error(`An error occurred validating the submitted exam.`);
+      }
+
+      const completedChallenge = pick(body, ['id', 'challengeType']);
+      completedChallenge.completedDate = Date.now();
+      completedChallenge.examResults = examResults;
+
+      const { addPoint, alreadyCompleted, updateData, completedDate } =
+        buildExamUserUpdate(user, completedChallenge);
+
+      user.updateAttributes(updateData, err => {
+        if (err) {
+          return next(err);
+        }
+
+        const points = addPoint ? user.points + 1 : user.points;
+
+        return res.json({
+          alreadyCompleted,
+          points,
+          completedDate,
+          examResults
+        });
+      });
+    } catch (err) {
+      log(err);
+      return res.send({ error: err.message });
+    }
+  };
+}
+
+function createMsTrophyChallengeCompleted(app) {
+  const { MsUsername } = app.models;
+
+  return async function msTrophyChallengeCompleted(req, res, next) {
+    const { user, body = {} } = req;
+    const { id = '' } = body;
+
+    try {
+      const msUser = await MsUsername.findOne({
+        where: { userId: user.id }
+      });
+
+      if (!msUser || !msUser.msUsername) {
+        return res
+          .status(403)
+          .json({ type: 'error', message: 'flash.ms.trophy.err-1' });
+      }
+
+      const { msUsername } = msUser;
+
+      const challenge = msTrophyChallenges.find(
+        challenge => challenge.id === id
+      );
+
+      if (!challenge) {
+        return res
+          .status(400)
+          .json({ type: 'error', message: 'flash.ms.trophy.err-2' });
+      }
+
+      const { msTrophyId = '' } = challenge;
+
+      const msProfileApi = `https://learn.microsoft.com/api/profiles/${msUsername}`;
+      const msProfileApiRes = await fetch(msProfileApi);
+      const msProfileJson = await msProfileApiRes.json();
+
+      if (!msProfileApiRes.ok || !msProfileJson.userId) {
+        return res.status(403).json({
+          type: 'error',
+          message: 'flash.ms.profile.err',
+          variables: {
+            msUsername
+          }
+        });
+      }
+
+      const { userId } = msProfileJson;
+
+      const msUserAchievementsApi = `https://learn.microsoft.com/api/achievements/user/${userId}`;
+      const msUserAchievementsApiRes = await fetch(msUserAchievementsApi);
+      const msUserAchievementsJson = await msUserAchievementsApiRes.json();
+
+      if (!msUserAchievementsApiRes.ok) {
+        return res.status(403).json({
+          type: 'error',
+          message: 'flash.ms.trophy.err-3'
+        });
+      }
+
+      if (msUserAchievementsJson.achievements?.length === 0) {
+        return res.status(403).json({
+          type: 'error',
+          message: 'flash.ms.trophy.err-6'
+        });
+      }
+
+      const hasEarnedTrophy = msUserAchievementsJson.achievements?.some(
+        a => a.typeId === msTrophyId
+      );
+
+      if (!hasEarnedTrophy) {
+        return res.status(403).json({
+          type: 'error',
+          message: 'flash.ms.trophy.err-4',
+          variables: {
+            msUsername
+          }
+        });
+      }
+
+      const completedChallenge = pick(body, ['id']);
+
+      completedChallenge.solution = msUserAchievementsApi;
+      completedChallenge.completedDate = Date.now();
+
+      try {
+        await user.getCompletedChallenges$().toPromise();
+      } catch (e) {
+        return next(e);
+      }
+
       const { alreadyCompleted, updateData } = buildUserUpdate(
         user,
         completedChallenge.id,
         completedChallenge
       );
 
-      const updatePromise = new Promise((resolve, reject) =>
-        user.updateAttributes(updateData, err => {
-          if (err) {
-            return reject(err);
-          }
-          return resolve();
-        })
-      );
-      return Observable.fromPromise(updatePromise).doOnNext(() => {
+      user.updateAttributes(updateData, err => {
+        if (err) {
+          return next(err);
+        }
+
         return res.json({
           alreadyCompleted,
           points: alreadyCompleted ? user.points : user.points + 1,
           completedDate: completedChallenge.completedDate
         });
       });
-    })
-    .subscribe(() => {}, next);
+    } catch (e) {
+      log(e);
+      return res.status(500).json({
+        type: 'error',
+        message: 'flash.ms.trophy.err-5'
+      });
+    }
+  };
 }
 
-function saveChallenge(req, res, next) {
+async function saveChallenge(req, res, next) {
   const user = req.user;
+  const { savedChallenges = [] } = user;
   const { id: challengeId, files = [] } = req.body;
 
   if (!savableChallenges.includes(challengeId)) {
     return res.status(403).send('That challenge type is not savable');
   }
 
-  const newSavedChallenges = buildNewSavedChallenges({
-    user,
-    challengeId,
-    completedDate: Date.now(),
-    files
-  });
+  const challengeToSave = {
+    id: challengeId,
+    lastSavedDate: Date.now(),
+    files: files?.map(file =>
+      pick(file, ['contents', 'key', 'name', 'ext', 'history'])
+    )
+  };
 
-  return user
-    .getSavedChallenges$()
-    .flatMap(() => {
-      const updateData = {};
-      updateData.$set = {
-        savedChallenges: newSavedChallenges
-      };
-      const updatePromise = new Promise((resolve, reject) =>
-        user.updateAttributes(updateData, err => {
-          if (err) {
-            return reject(err);
-          }
-          return resolve();
-        })
-      );
-      return Observable.fromPromise(updatePromise).doOnNext(() => {
-        return res.json({
-          savedChallenges: newSavedChallenges
-        });
-      });
-    })
-    .subscribe(() => {}, next);
+  try {
+    await user.getSavedChallenges$().toPromise();
+  } catch (e) {
+    return next(e);
+  }
+
+  const savedIndex = savedChallenges.findIndex(({ id }) => challengeId === id);
+  const $push = {},
+    $set = {};
+
+  if (savedIndex >= 0) {
+    $set[`savedChallenges.${savedIndex}`] = challengeToSave;
+    savedChallenges[savedIndex] = challengeToSave;
+  } else {
+    $push.savedChallenges = challengeToSave;
+    savedChallenges.push(challengeToSave);
+  }
+
+  const updateData = {};
+  if (!isEmpty($set)) updateData.$set = $set;
+  if (!isEmpty($push)) updateData.$push = $push;
+
+  user.updateAttributes(updateData, err => {
+    if (err) {
+      return next(err);
+    }
+
+    return res.json({
+      savedChallenges
+    });
+  });
 }
 
 const codeRoadChallenges = getChallenges().filter(
@@ -521,12 +918,8 @@ function createCoderoadChallengeCompleted(app) {
     const tutorialRepo = tutorialId?.split(':')[0];
     const tutorialOrg = tutorialRepo?.split('/')?.[0];
 
-    // this allows any GH account to host the repo in development or staging
-    // .org submissions should always be from repos hosted on the fCC GH org
-    if (deploymentEnv !== 'staging' && environment !== 'development') {
-      if (tutorialOrg !== 'freeCodeCamp')
-        return res.send('Tutorial not hosted on freeCodeCamp GitHub account');
-    }
+    if (tutorialOrg !== 'freeCodeCamp')
+      return res.send('Tutorial not hosted on freeCodeCamp GitHub account');
 
     // validate tutorial name is in codeRoadChallenges object
     const challenge = codeRoadChallenges.find(challenge =>

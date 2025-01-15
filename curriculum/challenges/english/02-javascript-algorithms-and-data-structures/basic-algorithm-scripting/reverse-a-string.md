@@ -1,43 +1,44 @@
 ---
 id: a202eed8fc186c8434cb6d61
 title: Reverse a String
-challengeType: 5
+challengeType: 1
 forumTopicId: 16043
 dashedName: reverse-a-string
 ---
 
 # --description--
 
-Reverse the provided string.
+Reverse the provided string and return the reversed string.
 
-You may need to turn the string into an array before you can reverse it.
-
-Your result must be a string.
+For example, `"hello"` should become `"olleh"`.
 
 # --hints--
 
 `reverseString("hello")` should return a string.
 
 ```js
-assert(typeof reverseString('hello') === 'string');
+assert.isString(reverseString('hello'));
 ```
 
 `reverseString("hello")` should return the string `olleh`.
 
 ```js
-assert(reverseString('hello') === 'olleh');
+assert.strictEqual(reverseString('hello'), 'olleh');
 ```
 
 `reverseString("Howdy")` should return the string `ydwoH`.
 
 ```js
-assert(reverseString('Howdy') === 'ydwoH');
+assert.strictEqual(reverseString('Howdy'), 'ydwoH');
 ```
 
 `reverseString("Greetings from Earth")` should return the string `htraE morf sgniteerG`.
 
 ```js
-assert(reverseString('Greetings from Earth') === 'htraE morf sgniteerG');
+assert.strictEqual(
+  reverseString('Greetings from Earth'),
+  'htraE morf sgniteerG'
+);
 ```
 
 # --seed--
@@ -49,7 +50,7 @@ function reverseString(str) {
   return str;
 }
 
-reverseString("hello");
+reverseString('hello');
 ```
 
 # --solutions--
@@ -59,5 +60,5 @@ function reverseString(str) {
   return str.split('').reverse().join('');
 }
 
-reverseString("hello");
+reverseString('hello');
 ```

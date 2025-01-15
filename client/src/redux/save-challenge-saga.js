@@ -1,21 +1,24 @@
-import { call, takeEvery, put, select } from 'redux-saga/effects';
-import { postSaveChallenge, mapFilesToChallengeFiles } from '../utils/ajax';
+import { call, put, select, takeEvery } from 'redux-saga/effects';
+
+import { canSaveToDB } from '../../../shared/config/challenge-types';
+import { createFlashMessage } from '../components/Flash/redux';
+import { FlashMessages } from '../components/Flash/redux/flash-messages';
 import {
   challengeDataSelector,
   challengeMetaSelector
-} from '../templates/Challenges/redux';
-import { createFlashMessage } from '../components/Flash/redux';
-import { challengeTypes } from '../../utils/challenge-types';
-import { FlashMessages } from '../components/Flash/redux/flash-messages';
+} from '../templates/Challenges/redux/selectors';
+import { createFiles } from '../templates/Challenges/redux/actions';
+import { mapFilesToChallengeFiles, postSaveChallenge } from '../utils/ajax';
 import {
-  standardizeRequestBody,
-  getStringSizeInBytes,
   bodySizeFits,
-  MAX_BODY_SIZE
+  getStringSizeInBytes,
+  MAX_BODY_SIZE,
+  standardizeRequestBody
 } from '../utils/challenge-request-helpers';
-import { saveChallengeComplete, savedChallengesSelector } from './';
+import { saveChallengeComplete } from './actions';
+import { savedChallengesSelector } from './selectors';
 
-export function* saveChallengeSaga() {
+function* saveChallengeSaga() {
   const { id, challengeType } = yield select(challengeMetaSelector);
   const { challengeFiles } = yield select(challengeDataSelector);
   const savedChallenges = yield select(savedChallengesSelector);
@@ -31,8 +34,7 @@ export function* saveChallengeSaga() {
     );
   }
 
-  // only allow saving of multifileCertProject's
-  if (challengeType === challengeTypes.multifileCertProject) {
+  if (canSaveToDB(challengeType)) {
     const body = standardizeRequestBody({ id, challengeFiles, challengeType });
     const bodySizeInBytes = getStringSizeInBytes(body);
 
@@ -46,14 +48,15 @@ export function* saveChallengeSaga() {
       );
     } else {
       try {
-        const response = yield call(postSaveChallenge, body);
+        const { data } = yield call(postSaveChallenge, body);
 
-        if (response?.message) {
-          yield put(createFlashMessage(response));
-        } else if (response?.savedChallenges) {
+        if (data?.message) {
+          yield put(createFlashMessage(data));
+        } else if (data?.savedChallenges) {
+          yield put(createFiles(challengeFiles));
           yield put(
             saveChallengeComplete(
-              mapFilesToChallengeFiles(response.savedChallenges)
+              mapFilesToChallengeFiles(data.savedChallenges)
             )
           );
           yield put(

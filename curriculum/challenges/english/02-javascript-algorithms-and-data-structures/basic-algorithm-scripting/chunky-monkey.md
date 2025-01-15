@@ -1,7 +1,7 @@
 ---
 id: a9bd25c716030ec90084d8a1
 title: Chunky Monkey
-challengeType: 5
+challengeType: 1
 forumTopicId: 16005
 dashedName: chunky-monkey
 ---
@@ -90,7 +90,7 @@ function chunkArrayInGroups(arr, size) {
   return arr;
 }
 
-chunkArrayInGroups(["a", "b", "c", "d"], 2);
+chunkArrayInGroups(['a', 'b', 'c', 'd'], 2);
 ```
 
 # --solutions--
@@ -106,5 +106,5 @@ function chunkArrayInGroups(arr, size) {
   return out;
 }
 
-chunkArrayInGroups(["a", "b", "c", "d"], 2);
+chunkArrayInGroups(['a', 'b', 'c', 'd'], 2);
 ```

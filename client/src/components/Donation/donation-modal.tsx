@@ -1,183 +1,84 @@
-import { Modal, Button, Col, Row } from '@freecodecamp/react-bootstrap';
 import { WindowLocation } from '@reach/router';
-import React, { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import { goToAnchor } from 'react-scrollable-anchor';
 import { bindActionCreators, Dispatch, AnyAction } from 'redux';
 import { createSelector } from 'reselect';
-import { modalDefaultDonation } from '../../../../config/donation-settings';
-import Cup from '../../assets/icons/cup';
-import Heart from '../../assets/icons/heart';
+import { Modal } from '@freecodecamp/ui';
+import { useFeature } from '@growthbook/growthbook-react';
 
+import { closeDonationModal } from '../../redux/actions';
 import {
-  closeDonationModal,
   isDonationModalOpenSelector,
-  recentlyClaimedBlockSelector,
-  executeGA
-} from '../../redux';
+  recentlyClaimedBlockSelector
+} from '../../redux/selectors';
 import { isLocationSuperBlock } from '../../utils/path-parsers';
 import { playTone } from '../../utils/tone';
-import { Spacer } from '../helpers';
-import DonateForm from './donate-form';
+import callGA from '../../analytics/call-ga';
+import DonationModalBody from './donation-modal-body';
+
+type RecentlyClaimedBlock = null | { block: string; superBlock: string };
 
 const mapStateToProps = createSelector(
   isDonationModalOpenSelector,
   recentlyClaimedBlockSelector,
-  (show: boolean, recentlyClaimedBlock: string) => ({
+  (show: boolean, recentlyClaimedBlock: RecentlyClaimedBlock) => ({
     show,
     recentlyClaimedBlock
   })
 );
 
 const mapDispatchToProps = (dispatch: Dispatch<AnyAction>) =>
-  bindActionCreators(
-    {
-      closeDonationModal,
-      executeGA
-    },
-    dispatch
-  );
+  bindActionCreators({ closeDonationModal }, dispatch);
 
 type DonateModalProps = {
   activeDonors?: number;
   closeDonationModal: typeof closeDonationModal;
-  executeGA: typeof executeGA;
-  location: WindowLocation | undefined;
-  recentlyClaimedBlock: string;
+  location?: WindowLocation;
+  recentlyClaimedBlock: RecentlyClaimedBlock;
   show: boolean;
 };
 
 function DonateModal({
   show,
   closeDonationModal,
-  executeGA,
   location,
   recentlyClaimedBlock
 }: DonateModalProps): JSX.Element {
-  const [closeLabel, setCloseLabel] = React.useState(false);
-  const { t } = useTranslation();
-  const handleProcessing = (
-    duration: string,
-    amount: number,
-    action: string
-  ) => {
-    executeGA({
-      type: 'event',
-      data: {
-        category: 'Donation',
-        action: `Modal ${action}`,
-        label: duration,
-        value: amount
-      }
-    });
-    setCloseLabel(true);
-  };
+  const [canClose, setCanClose] = useState(false);
+  const isA11yFeatureEnabled = useFeature('a11y-donation-modal').on;
 
   useEffect(() => {
     if (show) {
       void playTone('donation');
-      executeGA({ type: 'modal', data: '/donation-modal' });
-      executeGA({
-        type: 'event',
-        data: {
-          category: 'Donation View',
-          action: `Displayed ${
-            recentlyClaimedBlock ? 'block' : 'progress'
-          } donation modal`,
-          nonInteraction: true
-        }
+      callGA({ event: 'pageview', pagePath: '/donation-modal' });
+      callGA({
+        event: 'donation_view',
+        action: `Displayed ${
+          recentlyClaimedBlock !== null ? 'Block' : 'Progress'
+        } Donation Modal`
       });
     }
-  }, [show, recentlyClaimedBlock, executeGA]);
-
-  const getDonationText = () => {
-    const donationDuration = modalDefaultDonation.donationDuration;
-    switch (donationDuration) {
-      case 'onetime':
-        return <b>{t('donate.duration')}</b>;
-      case 'month':
-        return <b>{t('donate.duration-2')}</b>;
-      case 'year':
-        return <b>{t('donate.duration-3')}</b>;
-      default:
-        return <b>{t('donate.duration-4')}</b>;
-    }
-  };
+  }, [show, recentlyClaimedBlock]);
 
   const handleModalHide = () => {
     // If modal is open on a SuperBlock page
     if (isLocationSuperBlock(location)) {
       goToAnchor('claim-cert-block');
     }
+
+    if (isA11yFeatureEnabled && canClose) {
+      closeDonationModal();
+    }
   };
 
-  const blockDonationText = (
-    <div className=' text-center block-modal-text'>
-      <div className='donation-icon-container'>
-        <Cup className='donation-icon' />
-      </div>
-      <Row>
-        {!closeLabel && (
-          <Col sm={10} smOffset={1} xs={12}>
-            <b>{t('donate.nicely-done', { block: recentlyClaimedBlock })}</b>
-            <br />
-            {getDonationText()}
-          </Col>
-        )}
-      </Row>
-    </div>
-  );
-
-  const progressDonationText = (
-    <div className='text-center progress-modal-text'>
-      <div className='donation-icon-container'>
-        <Heart className='donation-icon' />
-      </div>
-      <Row>
-        {!closeLabel && (
-          <Col sm={10} smOffset={1} xs={12}>
-            {getDonationText()}
-          </Col>
-        )}
-      </Row>
-    </div>
-  );
-
   return (
-    <Modal
-      bsSize='lg'
-      className='donation-modal'
-      onExited={handleModalHide}
-      show={show}
-    >
-      <Modal.Body>
-        {recentlyClaimedBlock ? blockDonationText : progressDonationText}
-        <Spacer />
-        <Row>
-          <Col xs={12}>
-            <DonateForm
-              handleProcessing={handleProcessing}
-              isMinimalForm={true}
-            />
-          </Col>
-        </Row>
-        <Spacer />
-        <Row>
-          <Col sm={4} smOffset={4} xs={8} xsOffset={2}>
-            <Button
-              block={true}
-              bsSize='sm'
-              bsStyle='primary'
-              className='btn-link'
-              onClick={closeDonationModal}
-              tabIndex='0'
-            >
-              {closeLabel ? t('buttons.close') : t('buttons.ask-later')}
-            </Button>
-          </Col>
-        </Row>
-      </Modal.Body>
+    <Modal size='large' onClose={handleModalHide} open={show}>
+      <DonationModalBody
+        closeDonationModal={closeDonationModal}
+        recentlyClaimedBlock={recentlyClaimedBlock}
+        setCanClose={setCanClose}
+      />
     </Modal>
   );
 }

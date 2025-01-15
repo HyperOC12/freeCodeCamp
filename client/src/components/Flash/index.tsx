@@ -1,5 +1,5 @@
-import { Alert } from '@freecodecamp/react-bootstrap';
-import React, { useState, useEffect } from 'react';
+import { Alert, CloseButton, type AlertProps } from '@freecodecamp/ui';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { FlashState } from '../../redux/types';
@@ -13,47 +13,36 @@ type FlashProps = {
 };
 
 function Flash({ flashMessage, removeFlashMessage }: FlashProps): JSX.Element {
-  const { type, message, id, variables } = flashMessage;
+  const { type, message, id, variables = {} } = flashMessage;
   const { t } = useTranslation();
-  const [flashMessageHeight, setFlashMessageHeight] = useState(0);
 
-  useEffect(() => {
-    const flashMessageElem: HTMLElement | null =
-      document.querySelector('.flash-message');
-    setFlashMessageHeight(flashMessageElem?.offsetHeight || 0);
-    document.documentElement.style.setProperty(
-      '--flash-message-height',
-      `${flashMessageHeight}px`
-    );
-  }, [flashMessageHeight]);
+  // Some APIs are returning 'error' as a flash type, and it needs to be mapped to 'danger'.
+  // TODO: Standardize the value of `type`.
+  // Tracking issue: https://github.com/freeCodeCamp/freeCodeCamp/issues/50184
+  const flashStyle =
+    type === 'error' ? 'danger' : (type as AlertProps['variant']);
 
   function handleClose() {
-    document.documentElement.style.setProperty('--flash-message-height', '0px');
     removeFlashMessage();
   }
 
   return (
-    <>
-      <TransitionGroup>
-        <CSSTransition classNames='flash-message' key={id} timeout={500}>
-          <Alert
-            bsStyle={type}
-            className='flash-message'
-            closeLabel={t('buttons.close')}
-            onDismiss={handleClose}
-          >
-            {t(message, variables)}
-          </Alert>
-        </CSSTransition>
-      </TransitionGroup>
-      {flashMessage && (
-        <div
-          style={{
-            height: `${flashMessageHeight}px`
-          }}
-        />
-      )}
-    </>
+    <TransitionGroup>
+      <CSSTransition key={id} timeout={500}>
+        <Alert
+          variant={flashStyle}
+          className='flash-message'
+          data-playwright-test-label='flash-message'
+        >
+          {t(message, variables)}
+          <CloseButton
+            onClick={handleClose}
+            label={t('buttons.close')}
+            className='close'
+          />
+        </Alert>
+      </CSSTransition>
+    </TransitionGroup>
   );
 }
 

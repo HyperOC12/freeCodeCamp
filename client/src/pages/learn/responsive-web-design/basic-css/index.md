@@ -1,7 +1,7 @@
 ---
 title: Introduction to Basic CSS
-block: Basic CSS
-superBlock: Responsive Web Design
+block: basic-css
+superBlock: responsive-web-design
 ---
 
 ## Introduction to Basic CSS
@@ -26,7 +26,7 @@ The idea behind CSS is that you can use a selector to target an HTML element in 
 
 In this section, you'll see how adding CSS styles to the elements of your CatPhotoApp can change it from simple text to something more.
 
-<div role="alert" class="fade alert alert-info show flash-message-enter-active">
+<div role="alert" class="alert alert-info">
     <p>
         Note: Some browser extensions may interfere with elements on the page. If the tests fail, try disabling your extensions for the most reliable experience.
     </p>

@@ -1,7 +1,9 @@
-import { Alert, Button } from '@freecodecamp/react-bootstrap';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Spinner from 'react-spinkit';
+import { Alert, Spacer } from '@freecodecamp/ui';
+
+import { Link } from '../helpers';
 
 type DonateCompletionProps = {
   error: string | null;
@@ -27,20 +29,15 @@ function DonateCompletion({
   const heading = redirecting
     ? `${t('donate.redirecting')}`
     : processing
-    ? `${t('donate.processing')}`
-    : success
-    ? `${t('donate.thank-you')}`
-    : `${t('donate.error')}`;
+      ? `${t('donate.processing')}`
+      : success
+        ? `${t('donate.thank-you')}`
+        : `${t('donate.error')}`;
 
   return (
-    <Alert
-      bsStyle={style}
-      className='donation-completion'
-      closeLabel={t('buttons.close')}
-    >
-      <h4>
-        <b>{heading}</b>
-      </h4>
+    <Alert variant={style} className='donation-completion'>
+      <b>{heading}</b>
+      <Spacer size='m' />
       <div className='donation-completion-body'>
         {(processing || redirecting) && (
           <Spinner
@@ -51,20 +48,31 @@ function DonateCompletion({
           />
         )}
         {success && (
-          <div>
+          <>
             <p>{t('donate.free-tech')}</p>
-            {isSignedIn && <p>{t('donate.no-halo')}</p>}
-          </div>
+            {isSignedIn && (
+              <>
+                <p>{t('donate.visit-supporters')}</p>
+
+                <Link
+                  className='btn complete-button'
+                  key='supporters'
+                  sameTab={false}
+                  to='/supporters'
+                >
+                  {t('buttons.go-to-supporters')}
+                </Link>
+              </>
+            )}
+          </>
         )}
         {error && <p>{error}</p>}
       </div>
       <div className='donation-completion-buttons'>
         {error && (
-          <div>
-            <Button bsStyle='primary' onClick={reset}>
-              {t('buttons.try-again')}
-            </Button>
-          </div>
+          <button type='button' className='try-again-button' onClick={reset}>
+            {t('buttons.try-again')}
+          </button>
         )}
       </div>
     </Alert>

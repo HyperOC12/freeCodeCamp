@@ -32,6 +32,12 @@ Build `myStr` from the strings `This is the start.` and `This is the end.` using
 
 # --hints--
 
+`myStr` should have a single space character between the two strings.
+
+```js
+assert(/start\. This/.test(myStr));
+```
+
 `myStr` should have a value of the string `This is the start. This is the end.`
 
 ```js
@@ -41,19 +47,19 @@ assert(myStr === 'This is the start. This is the end.');
 You should use the `+` operator to build `myStr`.
 
 ```js
-assert(code.match(/(["']).*\1\s*\+\s*(["']).*\2/g));
+assert(__helpers.removeJSComments(code).match(/(["']).*\1\s*\+\s*(["']).*\2/g));
 ```
 
 `myStr` should be created using the `const` keyword.
 
 ```js
-assert(/const\s+myStr/.test(code));
+assert(/const\s+myStr/.test(__helpers.removeJSComments(code)));
 ```
 
 You should assign the result to the `myStr` variable.
 
 ```js
-assert(/myStr\s*=/.test(code));
+assert(/myStr\s*=/.test(__helpers.removeJSComments(code)));
 ```
 
 # --seed--

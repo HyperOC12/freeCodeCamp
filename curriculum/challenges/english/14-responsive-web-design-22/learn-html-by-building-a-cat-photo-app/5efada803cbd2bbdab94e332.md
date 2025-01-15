@@ -1,8 +1,8 @@
 ---
 id: 5efada803cbd2bbdab94e332
-title: Step 28
+title: Step 31
 challengeType: 0
-dashedName: step-28
+dashedName: step-31
 ---
 
 # --description--
@@ -14,19 +14,19 @@ Inside the `figure` element you just added, nest an `img` element with a `src` a
 Your second `figure` element should have an opening tag. Opening tags have this syntax: `<elementName>`.
 
 ```js
-assert(document.querySelectorAll('figure').length === 2);
+assert(document.querySelectorAll('figure').length >= 2);
 ```
 
 Your second `figure` element should have a closing tag. Closing tags have a `/` just after the `<` character.
 
 ```js
-assert(code.match(/<\/figure>/g).length === 2);
+assert(code.match(/<\/figure>/g).length >= 2);
 ```
 
 There should be a second `figure` element right above the second `section` element's closing tag. You have them in the wrong order.
 
 ```js
-assert($('main > section')[1].lastElementChild.nodeName === 'FIGURE');
+assert.strictEqual(document.querySelectorAll('main > section')?.[1]?.lastElementChild?.nodeName, 'FIGURE');
 ```
 
 You should have a third `img` element nested in the `figure` element.
@@ -34,25 +34,23 @@ You should have a third `img` element nested in the `figure` element.
 ```js
 const catsImg = document.querySelectorAll('figure > img')[1];
 assert(
-  catsImg &&
-    catsImg.getAttribute('src').toLowerCase() === 'https://cdn.freecodecamp.org/curriculum/cat-photo-app/cats.jpg'
+  catsImg
 );
 ```
 
-The third image should have an `src` attribute set to `https://cdn.freecodecamp.org/curriculum/cat-photo-app/cats.jpg`.
+The third image should have a `src` attribute set to `https://cdn.freecodecamp.org/curriculum/cat-photo-app/cats.jpg`.
 
 ```js
 const catsImg = document.querySelectorAll('figure > img')[1];
-assert(
-  catsImg &&
-    catsImg.getAttribute('src').toLowerCase() === 'https://cdn.freecodecamp.org/curriculum/cat-photo-app/cats.jpg'
+assert.strictEqual(
+  catsImg?.src?.toLowerCase(), 'https://cdn.freecodecamp.org/curriculum/cat-photo-app/cats.jpg'
 );
 ```
 
 Although you have set the new image's `src` to the correct URL, it is recommended to always surround the value of an attribute with quotation marks.
 
 ```js
-assert(!/\<img\s+.+\s+src\s*=\s*https:\/\/cdn\.freecodecamp\.org\/curriculum\/cat-photo-app\/cats\.jpg/.test(code));
+assert.notMatch(code, /\<img\s+.+\s+src\s*=\s*https:\/\/cdn\.freecodecamp\.org\/curriculum\/cat-photo-app\/cats\.jpg/);
 ```
 
 # --seed--
@@ -62,12 +60,12 @@ assert(!/\<img\s+.+\s+src\s*=\s*https:\/\/cdn\.freecodecamp\.org\/curriculum\/ca
 ```html
 <html>
   <body>
-    <h1>CatPhotoApp</h1>
     <main>
+      <h1>CatPhotoApp</h1>
       <section>
         <h2>Cat Photos</h2>
-        <!-- TODO: Add link to cat photos -->
-        <p>Click here to view more <a target="_blank" href="https://freecatphotoapp.com">cat photos</a>.</p>
+        <p>Everyone loves <a href="https://cdn.freecodecamp.org/curriculum/cat-photo-app/running-cats.jpg">cute cats</a> online!</p>
+        <p>See more <a target="_blank" href="https://freecatphotoapp.com">cat photos</a> in our gallery.</p>
         <a href="https://freecatphotoapp.com"><img src="https://cdn.freecodecamp.org/curriculum/cat-photo-app/relaxing-cat.jpg" alt="A cute orange cat lying on its back."></a>
       </section>
       <section>
@@ -90,6 +88,7 @@ assert(!/\<img\s+.+\s+src\s*=\s*https:\/\/cdn\.freecodecamp\.org\/curriculum\/ca
         </ol>
 --fcc-editable-region--
         <figure>
+          
         </figure>
 --fcc-editable-region--
       </section>

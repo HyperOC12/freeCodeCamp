@@ -5,7 +5,6 @@
  *
  */
 
-import badwordFilter from 'bad-words';
 import debugFactory from 'debug';
 import dedent from 'dedent';
 import _ from 'lodash';
@@ -15,19 +14,14 @@ import { Observable } from 'rx';
 import uuid from 'uuid/v4';
 import { isEmail } from 'validator';
 
-import { blocklistedUsernames } from '../../../../config/constants';
-import { apiLocation } from '../../../../config/env.json';
+import { isProfane } from 'no-profanity';
+import { blocklistedUsernames } from '../../../../shared/config/constants';
 
 import { wrapHandledError } from '../../server/utils/create-handled-error.js';
 import {
   setAccessTokenToResponse,
   removeCookies
 } from '../../server/utils/getSetAccessToken';
-import {
-  normaliseUserFields,
-  getProgress,
-  publicUserProps
-} from '../../server/utils/publicUserProps';
 import { saveUser, observeMethod } from '../../server/utils/rx.js';
 import { getEmailSender } from '../../server/utils/url-utils';
 import {
@@ -162,6 +156,8 @@ export default function initializeUser(User) {
   User.definition.properties.rand.default = getRandomNumber;
   // increase user accessToken ttl to 900 days
   User.settings.ttl = 900 * 24 * 60 * 60 * 1000;
+  // Sets ttl to 900 days for mobile login created access tokens
+  User.settings.maxTTL = 900 * 24 * 60 * 60 * 1000;
 
   // username should not be in blocklist
   User.validatesExclusionOf('username', {
@@ -200,7 +196,7 @@ export default function initializeUser(User) {
           exists => {
             if (exists) {
               throw wrapHandledError(new Error('user already exists'), {
-                redirectTo: `${apiLocation}/signin`,
+                redirectTo: `${process.env.API_LOCATION}/signin`,
                 message: dedent`
         The ${user.email} email address is already associated with an account.
         Try signing in with it here instead.
@@ -341,6 +337,21 @@ export default function initializeUser(User) {
     );
   };
 
+  User.prototype.mobileLoginByRequest = function mobileLoginByRequest(
+    req,
+    res
+  ) {
+    return new Promise((resolve, reject) =>
+      this.createAccessToken({}, (err, accessToken) => {
+        if (err) {
+          return reject(err);
+        }
+        setAccessTokenToResponse({ accessToken }, req, res);
+        return resolve(accessToken);
+      })
+    );
+  };
+
   User.afterRemote('logout', function ({ req, res }, result, next) {
     removeCookies(req, res);
     next();
@@ -352,11 +363,10 @@ export default function initializeUser(User) {
     }
     log('check if username is available');
     // check to see if username is on blocklist
-    const usernameFilter = new badwordFilter();
+
     if (
       username &&
-      (blocklistedUsernames.includes(username) ||
-        usernameFilter.isProfane(username))
+      (blocklistedUsernames.includes(username) || isProfane(username))
     ) {
       return Promise.resolve(true);
     }
@@ -485,7 +495,7 @@ export default function initializeUser(User) {
         }
         const { id: loginToken, created: emailAuthLinkTTL } = token;
         const loginEmail = getEncodedEmail(newEmail ? newEmail : null);
-        const host = apiLocation;
+        const host = process.env.API_LOCATION;
         const mailOptions = {
           type: 'email',
           to: newEmail ? newEmail : this.email,
@@ -511,15 +521,17 @@ export default function initializeUser(User) {
           Observable.fromPromise(userUpdate)
         );
       })
-      .map(
-        () =>
-          'Check your email and click the link we sent you to confirm' +
-          ' your new email address.'
-      );
+      .map({
+        type: 'info',
+        message: dedent`Check your email and click the link we sent you to confirm your new email address.`
+      });
   }
 
   User.prototype.requestAuthEmail = requestAuthEmail;
 
+  /**
+   * @param {String} requestedEmail
+   */
   function requestUpdateEmail(requestedEmail) {
     const newEmail = ensureLowerCaseString(requestedEmail);
     const currentEmail = ensureLowerCaseString(this.email);
@@ -727,123 +739,6 @@ export default function initializeUser(User) {
     );
   };
 
-  function prepUserForPublish(user, profileUI) {
-    const {
-      about,
-      calendar,
-      completedChallenges,
-      isDonating,
-      joinDate,
-      location,
-      name,
-      points,
-      portfolio,
-      streak,
-      username,
-      yearsTopContributor
-    } = user;
-    const {
-      isLocked = true,
-      showAbout = false,
-      showCerts = false,
-      showDonation = false,
-      showHeatMap = false,
-      showLocation = false,
-      showName = false,
-      showPoints = false,
-      showPortfolio = false,
-      showTimeLine = false
-    } = profileUI;
-
-    if (isLocked) {
-      return {
-        isLocked,
-        profileUI,
-        username
-      };
-    }
-    return {
-      ...user,
-      about: showAbout ? about : '',
-      calendar: showHeatMap ? calendar : {},
-      completedChallenges: (function () {
-        if (showTimeLine) {
-          return showCerts
-            ? completedChallenges
-            : completedChallenges.filter(
-                ({ challengeType }) => challengeType !== 7
-              );
-        } else {
-          return [];
-        }
-      })(),
-      isDonating: showDonation ? isDonating : null,
-      joinDate: showAbout ? joinDate : '',
-      location: showLocation ? location : '',
-      name: showName ? name : '',
-      points: showPoints ? points : null,
-      portfolio: showPortfolio ? portfolio : [],
-      streak: showHeatMap ? streak : {},
-      yearsTopContributor: yearsTopContributor
-    };
-  }
-
-  User.getPublicProfile = function getPublicProfile(username, cb) {
-    return User.findOne$({ where: { username } })
-      .flatMap(user => {
-        if (!user) {
-          return Observable.of({});
-        }
-        const { completedChallenges, progressTimestamps, timezone, profileUI } =
-          user;
-        const allUser = {
-          ..._.pick(user, publicUserProps),
-          isGithub: !!user.githubProfile,
-          isLinkedIn: !!user.linkedin,
-          isTwitter: !!user.twitter,
-          isWebsite: !!user.website,
-          points: progressTimestamps.length,
-          completedChallenges,
-          ...getProgress(progressTimestamps, timezone),
-          ...normaliseUserFields(user),
-          joinDate: user.id.getTimestamp()
-        };
-
-        const publicUser = prepUserForPublish(allUser, profileUI);
-
-        return Observable.of({
-          entities: {
-            user: {
-              [user.username]: {
-                ...publicUser
-              }
-            }
-          },
-          result: user.username
-        });
-      })
-      .subscribe(user => cb(null, user), cb);
-  };
-
-  User.remoteMethod('getPublicProfile', {
-    accepts: {
-      arg: 'username',
-      type: 'string',
-      required: true
-    },
-    returns: [
-      {
-        arg: 'user',
-        type: 'object',
-        root: true
-      }
-    ],
-    http: {
-      path: '/get-public-profile',
-      verb: 'GET'
-    }
-  });
-
   User.giveBrowniePoints = function giveBrowniePoints(
     receiver,
     giver,
@@ -1027,6 +922,21 @@ export default function initializeUser(User) {
         return user.partiallyCompletedChallenges;
       });
     };
+
+  User.prototype.getCompletedExams$ = function getCompletedExams$() {
+    if (Array.isArray(this.completedExams) && this.completedExams.length) {
+      return Observable.of(this.completedExams);
+    }
+    const id = this.getId();
+    const filter = {
+      where: { id },
+      fields: { completedExams: true }
+    };
+    return this.constructor.findOne$(filter).map(user => {
+      this.completedExams = user.completedExams;
+      return user.completedExams;
+    });
+  };
 
   User.getMessages = messages => Promise.resolve(messages);
 

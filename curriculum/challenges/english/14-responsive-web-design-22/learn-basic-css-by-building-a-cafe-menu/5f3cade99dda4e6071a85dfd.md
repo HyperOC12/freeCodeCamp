@@ -1,38 +1,40 @@
 ---
 id: 5f3cade99dda4e6071a85dfd
-title: Step 47
+title: Step 46
 challengeType: 0
-dashedName: step-47
+dashedName: step-46
 ---
 
 # --description--
 
-You will come back to the styling the menu in a few steps, but for now, go ahead add a second `section` element below the first for displaying the desserts offered by the cafe.
+You will come back to styling the menu in a few steps, but for now, go ahead and add a second `section` element below the first for displaying the desserts offered by the cafe.
 
 # --hints--
 
 You should have an opening `section` tag.
 
 ```js
-assert(code.match(/<section>/ig).length === 2);
+assert.lengthOf(code.match(/<section>/ig) ,2);
 ```
 
 You should have a closing `section` tag.
 
 ```js
-assert(code.match(/<\/section>/ig).length === 2);
+assert.lengthOf(code.match(/<\/section>/ig) ,2);
 ```
 
 You should not change the existing `main` element.
 
 ```js
-assert($('main').length === 1);
+assert.lengthOf (document.querySelectorAll('main'), 1);
 ```
 
 Your new `section` element should be nested in the `main` element.
 
 ```js
-assert($('main').children('section').length === 2);
+const main = document.querySelector('main');
+const sections = main?.querySelectorAll(`:scope ${'section'}`);
+assert.lengthOf(sections,2);
 ```
 
 # --seed--
@@ -41,20 +43,18 @@ assert($('main').children('section').length === 2);
 
 ```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cafe Menu</title>
-    <link href="styles.css" rel="stylesheet" type="text/css" />
+    <link href="styles.css" rel="stylesheet"/>
   </head>
   <body>
     <div class="menu">
-      <header>
+      <main>
         <h1>CAMPER CAFE</h1>
         <p>Est. 2020</p>
-      </header>
-      <main>
 --fcc-editable-region--
         <section>
           <h2>Coffee</h2>
@@ -78,7 +78,7 @@ assert($('main').children('section').length === 2);
       </main>
     </div>
   </body>
-<html>
+</html>
 ```
 
 ```css
@@ -108,7 +108,7 @@ h1, h2, p {
 
 .price {
   text-align: right;
-  width: 25%
+  width: 25%;
 }
 ```
 

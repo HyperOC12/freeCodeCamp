@@ -1,8 +1,8 @@
 ---
 id: 5efae16e3cbd2bbdab94e334
-title: Step 30
+title: Step 33
 challengeType: 0
-dashedName: step-30
+dashedName: step-33
 ---
 
 # --description--
@@ -26,7 +26,7 @@ assert(code.match(/<\/figcaption\>/g).length === 2);
 There should be a `figure` element right above the second `section` element's closing tag.
 
 ```js
-assert($('main > section')[1].lastElementChild.nodeName === 'FIGURE');
+assert.strictEqual(document.querySelectorAll('main > section')?.[1]?.lastElementChild?.nodeName, 'FIGURE');
 ```
 
 The last `img` element should be nested in the `figure` element.
@@ -84,12 +84,12 @@ assert(
 ```html
 <html>
   <body>
-    <h1>CatPhotoApp</h1>
     <main>
+      <h1>CatPhotoApp</h1>
       <section>
         <h2>Cat Photos</h2>
-        <!-- TODO: Add link to cat photos -->
-        <p>Click here to view more <a target="_blank" href="https://freecatphotoapp.com">cat photos</a>.</p>
+        <p>Everyone loves <a href="https://cdn.freecodecamp.org/curriculum/cat-photo-app/running-cats.jpg">cute cats</a> online!</p>
+        <p>See more <a target="_blank" href="https://freecatphotoapp.com">cat photos</a> in our gallery.</p>
         <a href="https://freecatphotoapp.com"><img src="https://cdn.freecodecamp.org/curriculum/cat-photo-app/relaxing-cat.jpg" alt="A cute orange cat lying on its back."></a>
       </section>
       <section>
@@ -110,11 +110,12 @@ assert(
           <li>thunder</li>
           <li>other cats</li>
         </ol>
+--fcc-editable-region--
         <figure>
---fcc-editable-region--
           <img src="https://cdn.freecodecamp.org/curriculum/cat-photo-app/cats.jpg" alt="Five cats looking around a field.">
---fcc-editable-region--
+
         </figure>
+--fcc-editable-region--
       </section>
     </main>
   </body>

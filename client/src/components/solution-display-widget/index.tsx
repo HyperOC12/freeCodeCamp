@@ -1,137 +1,192 @@
-import {
-  Button,
-  DropdownButton,
-  MenuItem
-} from '@freecodecamp/react-bootstrap';
 import React from 'react';
+import { faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Dropdown, MenuItem, Button } from '@freecodecamp/ui';
 import { useTranslation } from 'react-i18next';
+
 import { CompletedChallenge } from '../../redux/prop-types';
 import { getSolutionDisplayType } from '../../utils/solution-display-type';
 
 interface Props {
   completedChallenge: CompletedChallenge;
-  dataCy?: string;
+  projectTitle: string;
   showUserCode: () => void;
   showProjectPreview?: () => void;
+  showExamResults?: () => void;
   displayContext: 'timeline' | 'settings' | 'certification';
 }
 
 export function SolutionDisplayWidget({
   completedChallenge,
-  dataCy,
+  projectTitle,
   showUserCode,
   showProjectPreview,
+  showExamResults,
   displayContext
-}: Props) {
+}: Props): JSX.Element | null {
   const { id, solution, githubLink } = completedChallenge;
   const { t } = useTranslation();
-
-  const showOrViewText =
-    displayContext === 'settings'
-      ? t('buttons.show-solution')
-      : t('buttons.view');
-
+  const viewText = t('buttons.view');
+  const viewCode = t('buttons.view-code');
+  const viewProject = t('buttons.view-project');
+  // We need to add a random number for dropdown button id's since there may be
+  // two dropdowns for the same project on the page.
+  const randomIdSuffix = Math.floor(Math.random() * 1_000_000);
   const ShowFilesSolutionForCertification = (
-    <button
-      className='project-link-button-override'
-      data-cy={dataCy}
-      onClick={showUserCode}
-    >
-      {t('certification.project.solution')}
-    </button>
+    <Button block={true} onClick={showUserCode}>
+      {viewText}{' '}
+      <span className='sr-only'>
+        {t('settings.labels.solution-for', { projectTitle })}
+      </span>
+    </Button>
   );
   const ShowProjectAndGithubLinkForCertification = (
-    <>
-      <a href={solution ?? ''} rel='noopener noreferrer' target='_blank'>
-        {t('certification.project.solution')}
-      </a>
-      ,{' '}
-      <a href={githubLink} rel='noopener noreferrer' target='_blank'>
-        {t('certification.project.source')}
-      </a>
-    </>
+    <Dropdown id={`dropdown-for-${id}-${randomIdSuffix}`}>
+      <Dropdown.Toggle>
+        {viewText}{' '}
+        <span className='sr-only'>
+          {t('settings.labels.solution-for', { projectTitle })}
+        </span>
+      </Dropdown.Toggle>
+      <Dropdown.Menu>
+        <MenuItem
+          variant='primary'
+          // This expression is only to resolve TypeScript error.
+          // There won't be a case where the link has an invalid `href`
+          // as this component is only rendered if `solution` is truthy.
+          href={solution ?? undefined}
+          rel='noopener noreferrer'
+          target='_blank'
+        >
+          {t('certification.project.solution')}{' '}
+          <span className='sr-only'>({t('aria.opens-new-window')})</span>
+          <FontAwesomeIcon icon={faExternalLinkAlt} />
+        </MenuItem>
+        <MenuItem
+          variant='primary'
+          href={githubLink}
+          rel='noopener noreferrer'
+          target='_blank'
+        >
+          {t('certification.project.source')}{' '}
+          <span className='sr-only'>({t('aria.opens-new-window')})</span>
+          <FontAwesomeIcon icon={faExternalLinkAlt} />
+        </MenuItem>
+      </Dropdown.Menu>
+    </Dropdown>
   );
   const ShowProjectLinkForCertification = (
-    <a
-      className='btn-invert'
-      href={solution ?? ''}
+    <Button
+      block={true}
+      // This expression is only to resolve TypeScript error.
+      // There won't be a case where the link has an invalid `href`
+      // as this component is only rendered if `solution` is truthy.
+      href={solution ?? undefined}
       rel='noopener noreferrer'
       target='_blank'
     >
-      {t('certification.project.solution')}
-    </a>
+      {viewText}{' '}
+      <span className='sr-only'>
+        {t('settings.labels.solution-for', { projectTitle })} (
+        {t('aria.opens-new-window')})
+      </span>
+      <FontAwesomeIcon icon={faExternalLinkAlt} />
+    </Button>
   );
   const MissingSolutionComponentForCertification = (
     <>{t('certification.project.no-solution')}</>
   );
   const ShowUserCode = (
-    <Button
-      block={true}
-      bsStyle='primary'
-      className='btn-invert'
-      data-cy={dataCy}
-      id={`btn-for-${id}`}
-      onClick={showUserCode}
-    >
-      {t('buttons.show-code')}
+    <Button block={true} variant='primary' onClick={showUserCode}>
+      {viewText}{' '}
+      <span className='sr-only'>
+        {t('settings.labels.solution-for', { projectTitle })}
+      </span>
     </Button>
   );
   const ShowMultifileProjectSolution = (
-    <DropdownButton
-      block={true}
-      bsStyle='primary'
-      className='btn-invert'
-      id={`dropdown-for-${id}`}
-      title={t('buttons.view')}
-    >
-      <MenuItem bsStyle='primary' onClick={showUserCode}>
-        {t('buttons.show-code')}
-      </MenuItem>
-      <MenuItem bsStyle='primary' onClick={showProjectPreview}>
-        {t('buttons.show-project')}
-      </MenuItem>
-    </DropdownButton>
+    <div>
+      <Dropdown id={`dropdown-for-${id}-${randomIdSuffix}`}>
+        <Dropdown.Toggle>
+          {viewText}{' '}
+          <span className='sr-only'>
+            {t('settings.labels.solution-for', { projectTitle })}
+          </span>
+        </Dropdown.Toggle>
+        <Dropdown.Menu>
+          <MenuItem variant='primary' onClick={showUserCode}>
+            {viewCode}
+          </MenuItem>
+          <MenuItem variant='primary' onClick={showProjectPreview}>
+            {viewProject}
+          </MenuItem>
+        </Dropdown.Menu>
+      </Dropdown>
+    </div>
   );
 
   const ShowProjectAndGithubLinks = (
-    <div className='solutions-dropdown'>
-      <DropdownButton
-        block={true}
-        bsStyle='primary'
-        className='btn-invert'
-        id={`dropdown-for-${id}`}
-        title={showOrViewText}
-      >
-        <MenuItem
-          bsStyle='primary'
-          href={solution}
-          rel='noopener noreferrer'
-          target='_blank'
-        >
-          {t('buttons.frontend')}
-        </MenuItem>
-        <MenuItem
-          bsStyle='primary'
-          href={githubLink}
-          rel='noopener noreferrer'
-          target='_blank'
-        >
-          {t('buttons.backend')}
-        </MenuItem>
-      </DropdownButton>
+    <div>
+      <Dropdown id={`dropdown-for-${id}-${randomIdSuffix}`}>
+        <Dropdown.Toggle>
+          {viewText}{' '}
+          <span className='sr-only'>
+            {t('settings.labels.solution-for', { projectTitle })}
+          </span>
+        </Dropdown.Toggle>
+        <Dropdown.Menu>
+          <MenuItem
+            variant='primary'
+            // This expression is only to resolve TypeScript error.
+            // There won't be a case where the link has an invalid `href`
+            // as this component is only rendered if `solution` is truthy.
+            href={solution ?? undefined}
+            rel='noopener noreferrer'
+            target='_blank'
+          >
+            {t('certification.project.solution')}{' '}
+            <span className='sr-only'>({t('aria.opens-new-window')})</span>
+            <FontAwesomeIcon icon={faExternalLinkAlt} />
+          </MenuItem>
+          <MenuItem
+            variant='primary'
+            href={githubLink}
+            rel='noopener noreferrer'
+            target='_blank'
+          >
+            {t('certification.project.source')}{' '}
+            <span className='sr-only'>({t('aria.opens-new-window')})</span>
+            <FontAwesomeIcon icon={faExternalLinkAlt} />
+          </MenuItem>
+        </Dropdown.Menu>
+      </Dropdown>
     </div>
   );
   const ShowProjectLink = (
     <Button
       block={true}
-      bsStyle='primary'
-      className='btn-invert'
-      href={solution}
-      id={`btn-for-${id}`}
+      variant='primary'
+      // This expression is only to resolve TypeScript error.
+      // There won't be a case where the link has an invalid `href`
+      // as this component is only rendered if `solution` is truthy.
+      href={solution ?? undefined}
       rel='noopener noreferrer'
       target='_blank'
     >
-      {showOrViewText}
+      {viewText}{' '}
+      <span className='sr-only'>
+        {t('settings.labels.solution-for', { projectTitle })} (
+        {t('aria.opens-new-window')})
+      </span>
+      <FontAwesomeIcon icon={faExternalLinkAlt} />
+    </Button>
+  );
+  const ShowExamResults = (
+    <Button block={true} variant='primary' onClick={showExamResults}>
+      {viewText}{' '}
+      <span className='sr-only'>
+        {t('settings.labels.results-for', { projectTitle })}
+      </span>
     </Button>
   );
   const MissingSolutionComponent =
@@ -146,6 +201,7 @@ export function SolutionDisplayWidget({
           showMultifileProjectSolution: ShowMultifileProjectSolution,
           showProjectAndGithubLinks: ShowProjectAndGithubLinkForCertification,
           showProjectLink: ShowProjectLinkForCertification,
+          showExamResults: ShowExamResults,
           none: MissingSolutionComponentForCertification
         }
       : {
@@ -153,6 +209,7 @@ export function SolutionDisplayWidget({
           showMultifileProjectSolution: ShowMultifileProjectSolution,
           showProjectAndGithubLinks: ShowProjectAndGithubLinks,
           showProjectLink: ShowProjectLink,
+          showExamResults: ShowExamResults,
           none: MissingSolutionComponent
         };
 

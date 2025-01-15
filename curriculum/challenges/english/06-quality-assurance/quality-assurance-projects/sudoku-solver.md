@@ -8,13 +8,11 @@ dashedName: sudoku-solver
 
 # --description--
 
-Build a full stack JavaScript app that is functionally similar to this: <https://sudoku-solver.freecodecamp.rocks/>. Working on this project will involve you writing your code using one of the following methods:
+Build a full stack JavaScript app that is functionally similar to this: <a href="https://sudoku-solver.freecodecamp.rocks/" target="_blank" rel="noopener noreferrer nofollow">https://sudoku-solver.freecodecamp.rocks/</a>. Working on this project will involve you writing your code using one of the following methods:
 
--   Clone [this GitHub repo](https://github.com/freecodecamp/boilerplate-project-sudoku-solver) and complete your project locally.
--   Use [our Replit starter project](https://replit.com/github/freeCodeCamp/boilerplate-project-sudoku-solver) to complete your project.
+-   Clone <a href="https://github.com/freecodecamp/boilerplate-project-sudoku-solver" target="_blank" rel="noopener noreferrer nofollow">this GitHub repo</a> and complete your project locally.
+-   Use <a href="https://gitpod.io/?autostart=true#https://github.com/freecodecamp/boilerplate-project-sudoku-solver" target="_blank" rel="noopener noreferrer nofollow">our Gitpod starter project</a> to complete your project. Learn <a href="https://forum.freecodecamp.org/t/how-to-use-gitpod-in-the-curriculum/668669#how-can-i-share-my-workspace-to-get-help-8" target="_blank" rel="noopener noreferrer nofollow">how to share your Gitpod workspace to get help</a>.
 -   Use a site builder of your choice to complete the project. Be sure to incorporate all the files from our GitHub repo.
-
-When you are done, make sure a working demo of your project is hosted somewhere public. Then submit the URL to it in the `Solution Link` field. Optionally, also submit a link to your project's source code in the `GitHub Link` field.
 
 # --instructions--
 
@@ -25,7 +23,7 @@ When you are done, make sure a working demo of your project is hosted somewhere 
 - All routing logic can go into `/routes/api.js`
 - See the `puzzle-strings.js` file in `/controllers` for some sample puzzles your application should solve
 - To run the challenge tests on this page, set `NODE_ENV` to `test` without quotes in the `.env` file
-- To run the tests in the console, use the command `npm run test`. To open the Replit console, press Ctrl+Shift+P (Cmd if on a Mac) and type "open shell"
+- To run the tests in the console, use the command `npm run test`.
 
 Write the following tests in `tests/1_unit-tests.js`:
 
@@ -270,7 +268,7 @@ async (getUserInput) => {
 };
 ```
 
-If the object submitted to `/api/check` is missing `puzzle`, `coordinate` or `value`, the returned value will be `{ error: Required field(s) missing }`
+If the object submitted to `/api/check` is missing `puzzle`, `coordinate` or `value`, the returned value will be `{ error: 'Required field(s) missing' }`
 
 ```js
 async (getUserInput) => {
@@ -324,7 +322,7 @@ async (getUserInput) => {
 };
 ```
 
-If the `value` submitted to `/api/check` is not a number between 1 and 9, the returned values will be `{ error: 'Invalid value' }`
+If the `value` submitted to `/api/check` is not a number between 1 and 9, the returned value will be `{ error: 'Invalid value' }`
 
 ```js
 async (getUserInput) => {
@@ -346,16 +344,18 @@ async (getUserInput) => {
 };
 ```
 
-All 12 unit tests are complete and passing. See `/tests/1_unit-tests.js` for the expected behavior you should write tests for.
+All 12 unit tests are complete and passing.
 
 ```js
 async (getUserInput) => {
   try {
     const getTests = await $.get(getUserInput('url') + '/_api/get-tests');
     assert.isArray(getTests);
-    const units = getTests.filter((el) => el.context.includes('UnitTests'));
-    assert.isAtLeast(units.length, 12, 'At least 12 tests passed');
-    units.forEach((test) => {
+    const unitTests = getTests.filter((test) => {
+      return !!test.context.match(/Unit\s*Tests/gi);
+    });
+    assert.isAtLeast(unitTests.length, 12, 'At least 12 tests passed');
+    unitTests.forEach((test) => {
       assert.equal(test.state, 'passed', 'Test in Passed State');
       assert.isAtLeast(
         test.assertions.length,
@@ -369,18 +369,18 @@ async (getUserInput) => {
 };
 ```
 
-All 14 functional tests are complete and passing. See `/tests/2_functional-tests.js` for the functionality you should write tests for.
+All 14 functional tests are complete and passing.
 
 ```js
 async (getUserInput) => {
   try {
     const getTests = await $.get(getUserInput('url') + '/_api/get-tests');
     assert.isArray(getTests);
-    const funcs = getTests.filter((el) =>
-      el.context.includes('Functional Tests')
-    );
-    assert.isAtLeast(funcs.length, 14, 'At least 14 tests passed');
-    funcs.forEach((test) => {
+    const functTests = getTests.filter((test) => {
+      return !!test.context.match(/Functional\s*Tests/gi);
+    });
+    assert.isAtLeast(functTests.length, 14, 'At least 14 tests passed');
+    functTests.forEach((test) => {
       assert.equal(test.state, 'passed', 'Test in Passed State');
       assert.isAtLeast(
         test.assertions.length,
@@ -392,14 +392,4 @@ async (getUserInput) => {
     throw new Error(err.responseText || err.message);
   }
 };
-```
-
-# --solutions--
-
-```js
-/**
-  Backend challenges don't need solutions,
-  because they would need to be tested against a full working project.
-  Please check our contributing guidelines to learn more.
-*/
 ```

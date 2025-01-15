@@ -1,23 +1,25 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import cors from 'cors';
 import express from 'express';
-import { blockRoute } from './routes/blockRoute';
-import { indexRoute } from './routes/indexRoute';
-import { saveRoute } from './routes/saveRoute';
-import { stepRoute } from './routes/stepRoute';
-import { superblockRoute } from './routes/superblockRoute';
-import { toolsRoute } from './routes/toolsRoute';
+import { blockRoute } from './routes/block-route';
+import { indexRoute } from './routes/index-route';
+import { saveRoute } from './routes/save-route';
+import { stepRoute } from './routes/step-route';
+import { superblockRoute } from './routes/super-block-route';
+import { toolsRoute } from './routes/tools-route';
 
 const app = express();
 
 app.use(
   cors({
-    origin: 'http://localhost:3300'
+    origin: process.env.CHALLENGE_EDITOR_CLIENT_LOCATION
   })
 );
 
 app.use(express.static('public'));
 app.use(express.json());
-app.use(express.urlencoded());
 
 app.post('/:superblock/:block/_tools/:command', (req, res, next) => {
   toolsRoute(req, res).catch(next);

@@ -28,6 +28,18 @@
   --love-dark: #f82153;
   --editor-background-light: #fffffe;
   --editor-background-dark: #2a2b40;
+  --focus-outline-color: var(--blue-mid);
+  --font-family-sans-serif: 'Lato', sans-serif;
+  --font-family-monospace: 'Hack-ZeroSlash', monospace;
+  --header-element-size: 28px;
+  --header-sub-element-size: 45px;
+  --header-height: 38px;
+  --breadcrumbs-height: 44px;
+  --z-index-site-header: 200;
+}
+
+:root:lang(ja) {
+  --font-family-sans-serif: 'Lato', 'NotoSansJapanese', sans-serif;
 }
 
 .dark-palette {
@@ -46,6 +58,10 @@
   --success-background: var(--green-dark);
   --danger-color: var(--red-light);
   --danger-background: var(--red-dark);
+  --yellow-background: var(--yellow-dark);
+  --yellow-color: var(--yellow-light);
+  --purple-background: var(--purple-dark);
+  --purple-color: var(--purple-light);
   --love-color: var(--love-light);
   --editor-background: var(--editor-background-dark);
 }
@@ -66,6 +82,10 @@
   --success-background: var(--green-light);
   --danger-color: var(--red-dark);
   --danger-background: var(--red-light);
+  --yellow-background: var(--yellow-light);
+  --yellow-color: var(--yellow-dark);
+  --purple-background: var(--purple-light);
+  --purple-color: var(--purple-dark);
   --love-color: var(--love-dark);
   --editor-background: var(--editor-background-light);
 }

@@ -1,4 +1,4 @@
-class WorkerExecutor {
+export class WorkerExecutor {
   constructor(
     workerName,
     { location = '/js/', maxWorkers = 2, terminateWorker = false } = {}
@@ -129,16 +129,17 @@ const eventify = self => {
 
   self.emit = (event, ...args) => {
     if (typeof self._events[event] !== 'undefined') {
-      self._events[event].forEach(listener => {
+      const listeners = self._events[event].slice();
+      for (let listener of listeners) {
         listener.apply(self, args);
-      });
+      }
     }
     return self;
   };
 
   self.once = (event, listener) => {
     self.on(event, function handler(...args) {
-      self.removeListener(handler);
+      self.removeListener(event, handler);
       listener.apply(self, args);
     });
     return self;
@@ -146,7 +147,3 @@ const eventify = self => {
 
   return self;
 };
-
-export default function createWorkerExecutor(workerName, options) {
-  return new WorkerExecutor(workerName, options);
-}

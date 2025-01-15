@@ -1,7 +1,8 @@
-import { Col, Row } from '@freecodecamp/react-bootstrap';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import envData from '../../../../../config/env.json';
+import { Container, Col, Row, Spacer } from '@freecodecamp/ui';
+
+import { clientLocale } from '../../../../config/env.json';
 import {
   AmazonLogo,
   AppleLogo,
@@ -11,32 +12,46 @@ import {
   TencentLogo,
   AlibabaLogo
 } from '../../../assets/images/components';
-import { Spacer } from '../../helpers';
 import BigCallToAction from './big-call-to-action';
 import CampersImage from './campers-image';
 
-interface LandingTopProps {
-  pageName: string;
-}
-
-const { clientLocale } = envData;
-function LandingTop({ pageName }: LandingTopProps): JSX.Element {
+function LandingTop(): JSX.Element {
   const { t } = useTranslation();
   const showChineseLogos = ['chinese', 'chinese-tradition'].includes(
     clientLocale
   );
   return (
-    <div className='landing-top'>
+    <Container className='landing-top landing-top-a'>
       <Row>
-        <Spacer />
+        <Spacer size='m' />
         <Col lg={8} lgOffset={2} sm={10} smOffset={1} xs={12}>
-          <h1 className='big-heading' data-test-label={`${pageName}-header`}>
+          <h1
+            id='content-start'
+            className='big-heading'
+            data-test-label='landing-header'
+            data-playwright-test-label='landing-big-heading-1'
+          >
             {t('landing.big-heading-1')}
           </h1>
-          <p className='big-heading'>{t('landing.big-heading-2')}</p>
-          <p className='big-heading'>{t('landing.big-heading-3')}</p>
-          <p>{t('landing.h2-heading')}</p>
-          <div className='logo-row'>
+          <p
+            className='big-heading'
+            data-playwright-test-label='landing-big-heading-2'
+          >
+            {t('landing.big-heading-2')}
+          </p>
+          <p
+            className='big-heading'
+            data-playwright-test-label='landing-big-heading-3'
+          >
+            {t('landing.big-heading-3')}
+          </p>
+          <p data-playwright-test-label='landing-h2-heading'>
+            {t('landing.h2-heading')}
+          </p>
+          <div
+            className='logo-row'
+            data-playwright-test-label='brand-logo-container'
+          >
             <AppleLogo />
             <GoogleLogo />
             <MicrosoftLogo />
@@ -52,13 +67,13 @@ function LandingTop({ pageName }: LandingTopProps): JSX.Element {
               </>
             )}
           </div>
-          <Spacer />
-          <BigCallToAction pageName={pageName} />
-          <CampersImage pageName={pageName} />
-          <Spacer />
+          <Spacer size='m' />
+          <BigCallToAction />
+          <CampersImage />
+          <Spacer size='m' />
         </Col>
       </Row>
-    </div>
+    </Container>
   );
 }
 
